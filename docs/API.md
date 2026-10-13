@@ -16,7 +16,7 @@
 - 建造：1 能量 = 1 进度，每 WORK × `BUILD_POWER`；需 WORK+CARRY；上限 10。
 - 掉落衰减 `ceil(amount/RESOURCE_DECAY)`；同格 Container 自动吸收。
 - Source +`SOURCE_ENERGY_REGEN`；Spawn +`SPAWN_ENERGY_REGEN`(1)。
-- 同 tick 互斥按官方文档。
-- Extension 任意距离；扣能先 Spawn 后 Extension。
+- 同 tick 互斥按官方文档；Extension 任意距离，扣能先 Spawn 后 Extension。
+- `GameObject.controlledBy` 返回控制该对象的 Flag；`BodyPart` 经 `arena/season_2/capture_the_flag/{basic|advanced}` 导入。
 
-模式未知项见 [SPAWN_AND_SWAMP.md](./SPAWN_AND_SWAMP.md)。
+模式说明：[SPAWN_AND_SWAMP.md](./SPAWN_AND_SWAMP.md)、[CAPTURE_THE_FLAG.md](./CAPTURE_THE_FLAG.md)、[CPU.md](./CPU.md)。
