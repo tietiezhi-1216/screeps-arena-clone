@@ -15,3 +15,5 @@
 - 疲劳：每个非 MOVE 部件（空 CARRY 不计）道路 1 / 平原 2 / 沼泽 10；每个 MOVE 每 tick −2。
 - 建造 1 能量 = 1 进度，每 WORK 每 tick `BUILD_POWER`；工地上限 `MAX_CONSTRUCTION_SITES`。
 - 掉落资源每 tick 衰减 `ceil(amount / RESOURCE_DECAY)`；Source 每 tick 回复 `SOURCE_ENERGY_REGEN`。
+
+模式布局与未知项另见 [CAPTURE_THE_FLAG.md](./CAPTURE_THE_FLAG.md)。`GameObject.controlledBy` 返回控制该对象的 Flag；`BodyPart` 经 `arena/season_2/capture_the_flag/{basic|advanced}` 导入。
