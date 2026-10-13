@@ -85,22 +85,65 @@ test('sandbox: no access to globals / dynamic code', () => {
   assert.equal(r.frames[1].log.p1[0], 'undefined undefined undefined undefined undefined');
 });
 
-test('capture the flag: setup per public rules (1 flag, 2 towers, 14 creeps each) and BodyPart pickup', async () => {
+test('CTF documented constants (bodies, counts, imports, arenaInfo)', async () => {
+  const CTF = await import('../src/modes/captureTheFlag.js');
+  assert.equal(CTF.CTF_CREEP_COUNT, 14);
+  assert.equal(CTF.CTF_BASIC_TOWERS_PER_PLAYER, 2);
+  assert.equal(CTF.CTF_ADVANCED_TICKS_LIMIT, 10000);
+  assert.equal(CTF.CTF_MAP_SIZE, 100);
+  assert.equal(CTF.CTF_ARENA_NAME, 'Capture the Flag');
+  assert.equal(CTF.CTF_SEASON, 'season_2');
+  assert.equal(CTF.CTF_IMPORT_BASIC, 'arena/season_2/capture_the_flag/basic');
+  assert.equal(CTF.ROSTER.length, 14);
+  const count = (pred) => CTF.ROSTER.filter(pred).length;
+  assert.equal(count(b => b.filter(x => x === C.CARRY).length === 3 && b.filter(x => x === C.MOVE).length === 6), 2);
+  assert.equal(count(b => b.filter(x => x === C.HEAL).length === 6 && b.filter(x => x === C.MOVE).length === 6), 4);
+  assert.equal(count(b => b.filter(x => x === C.RANGED_ATTACK).length === 6 && b.filter(x => x === C.MOVE).length === 6), 4);
+  assert.equal(count(b => b.filter(x => x === C.ATTACK).length === 3 && b.filter(x => x === C.TOUGH).length === 3 && b.filter(x => x === C.MOVE).length === 6), 4);
+  assert.equal(6 * C.HEAL_POWER, 72);
+  assert.equal(6 * C.RANGED_ATTACK_POWER, 60);
+  assert.equal(3 * C.ATTACK_POWER, 90);
+  assert.equal(C.TOWER_CAPACITY, 10);
+});
+test('capture the flag basic: 1 flag + 2 towers + 14 creeps each, BodyPart pickup, controlledBy', async () => {
   const { createMatch } = await import('../src/modes/captureTheFlag.js');
   const w = createMatch({ seed: 3 });
+  assert.equal(w.arena.name, 'Capture the Flag'); assert.equal(w.arena.level, 1); assert.equal(w.arena.season, 'season_2');
   for (const p of ['p1', 'p2']) {
     assert.equal(w.all(P.Flag).filter(f => f._owner === p).length, 1);
     assert.equal(w.all(P.StructureTower).filter(f => f._owner === p).length, 2);
     assert.equal(w.all(P.Creep).filter(f => f._owner === p).length, 14);
   }
   const ids = new Set(w.all().map(o => o.x + ',' + o.y)); assert.equal(ids.size, w.all().length, 'no overlapping objects');
+  const tower = w.all(P.StructureTower)[0]; assert.equal(tower.store.energy, 0); assert.ok(tower.controlledBy instanceof P.Flag);
   const c = w.all(P.Creep)[0]; const n = c.body.length; w.add(new P.BodyPart(w, c.x, c.y, C.HEAL, 100)); w.step();
   assert.equal(c.body.length, n + 1); assert.equal(c.body.at(-1).type, C.HEAL);
 });
-test('capture the flag: stepping on enemy flag wins; arena module import works', () => {
+test('capture the flag advanced: live layout (4 flags, 4 towers, 4 containers, ticksLimit 10000)', async () => {
+  const { createAdvanced, ADVANCED_LAYOUT } = await import('../src/modes/captureTheFlag.js');
+  const w = createAdvanced({ seed: 1 });
+  assert.equal(w.arena.level, 2); assert.equal(w.ticksLimit, 10000);
+  assert.equal(w.all(P.Flag).length, 4);
+  assert.equal(w.all(P.StructureTower).length, 4);
+  assert.equal(w.all(P.StructureContainer).length, 4);
+  assert.equal(w.all(P.Creep).length, 28);
+  assert.equal(w.all(P.Flag).filter(f => f._owner == null).length, 2);
+  for (const [x, y] of ADVANCED_LAYOUT.containers) {
+    const box = w.at(x, y).find(o => o instanceof P.StructureContainer);
+    assert.ok(box); assert.equal(box.store.energy, 1000);
+  }
+  const neu = w.all(P.Flag).find(f => f._owner == null);
+  const tw = w.all(P.StructureTower).find(t => t.controlledBy === neu);
+  assert.ok(tw); assert.equal(tw._owner, null);
+  w.add(new P.Creep(w, neu.x, neu.y, 'p1', [C.MOVE]));
+  w.step();
+  assert.equal(neu._owner, 'p1'); assert.equal(tw._owner, 'p1');
+});
+test('capture the flag: capturing all flags wins; arena BodyPart import works', () => {
   const ctf = fs.readFileSync('bots/ctf.mjs', 'utf8');
   const r = runMatch({ mode: 'capture-the-flag', seed: 2, scripts: [ctf, 'export function loop(){}'] });
-  assert.equal(r.meta.result.winner, 'p1'); assert.ok(!r.frames.some(f => (f.log.p1 || []).some(l => /error/.test(l))));
+  assert.equal(r.meta.result.winner, 'p1');
+  assert.ok(!r.frames.some(f => (f.log.p1 || []).some(l => /error/.test(l))));
 });
 test('spawn and swamp advanced has sources and build works', () => {
   const r = runMatch({ mode: 'spawn-and-swamp-advanced', seed: 1, maxTicks: 5, scripts: ['export function loop(){}', 'export function loop(){}'] });

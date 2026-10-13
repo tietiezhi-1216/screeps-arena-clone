@@ -15,6 +15,8 @@ export class Store {
 export class GameObject {
   constructor(w, x, y) { Object.defineProperty(this, '_w', { value: w }); this.id = String(w.nextId++); this.x = x; this.y = y; }
   get exists() { return this._w.objects.get(this.id) === this; }
+  /** 控制本对象的 Flag（Capture the Flag）；无则 undefined。官方：GameObject.controlledBy */
+  get controlledBy() { return this._controlledBy || undefined; }
   get ticksToDecay() { return undefined; }
   getRangeTo(p) { return range(this, p); }
   findClosestByRange(ps) { return this._w.utils.findClosestByRange(this, ps); }

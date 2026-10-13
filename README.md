@@ -60,7 +60,7 @@ export function loop() {
 已实现的 API 见 [docs/API.md](docs/API.md)。
 
 ## 模式
-- **Capture the Flag（基础）**：对角两角各 1 旗 + 2 塔 + 14 个预置 creep，无 Spawn；踩上敌旗获胜，全灭对方也获胜。中部周期性掉落 `BodyPart`（`import { BodyPart } from 'arena/season_2/capture_the_flag/basic'`），踩上去即加装该部件。creep 具体身体、地图、掉落频率、塔充能为近似实现。
+- **Capture the Flag（基础 / 高级）**：对照 [docs/CAPTURE_THE_FLAG.md](docs/CAPTURE_THE_FLAG.md)。基础：每方 1 旗 + 2 塔 + 14 creep；高级：实机 Season 2 布局（4 旗/4 塔/4 容器，`ticksLimit=10000`）。身体配方取自实机快照（M6C3/M6H6/M6R6/M6A3T3）；占领全部旗帜获胜。
 - **Spawn and Swamp（高级）**：基础版 + 每方 2 个 Source，可建造 Extension/Tower/Rampart/Wall/Road/Container。
 - **Spawn and Swamp（基础）**：
   - 100×100 地图、大片沼泽、左右镜像对称；双方各一个 Spawn（初始 500 能量）+ 3 个家门口容器。
@@ -75,7 +75,7 @@ src/engine/prototypes.js game/prototypes：GameObject/Creep/Structure*/Source/Re
 src/engine/pathfinder.js game/path-finder：CostMatrix + searchPath（A*，官方默认参数）
 src/engine/world.js      确定性 tick 结算：战斗 → 经济 → 移动(含 pull、对换、冲突) → 死亡/生产/衰减 → 模式规则；回放快照
 src/engine/sandbox.js    玩家 ES 模块改写与执行、game/visual、arenaInfo
-src/modes/               对局模式（spawnAndSwamp）
+src/modes/               对局模式（spawnAndSwamp / captureTheFlag）
 www/                     移动端客户端（Capacitor webDir）：Worker 跑模拟 → Canvas 回放，触控缩放/拖动、编辑器、应用内更新
 plugins/capacitor-app-updater  应用内更新插件（改自 screeps-blockly-mobile 的 AppUpdater）
 android-res/             启动图标（scripts/gen-icons.py 生成）
@@ -87,7 +87,8 @@ test/                    规则测试
 沿用同一套思路：原生 JS、引擎与渲染分离、引擎可在 Node 跑测试、常量照搬官方。后续可共用渲染风格、Blockly 积木层和局域网对战协议。
 
 ## 路线图
-- [ ] Capture the Flag、Spawn and Swamp 高级版（Source/建造/Extension/Tower）、Collect and Control 等模式
+- [x] Capture the Flag 基础/高级（见 docs/CAPTURE_THE_FLAG.md）
+- [ ] Collect and Control 等模式
 - [ ] 代码补全/语法高亮；Blockly 积木模式（复用 screeps-blockly-mobile 的方案）
 - [ ] 联机对战 / 天梯、PixiJS 渲染与更贴近官方的美术
 - [ ] 与官方行为逐条对照测试（移动冲突、rampart、疲劳等边界情况）
