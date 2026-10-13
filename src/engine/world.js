@@ -49,7 +49,7 @@ export class World {
       getDirection: (dx, dy) => direction(dx, dy),
       getTerrainAt: p => w.terrainAt(p.x, p.y),
       getCpuTime: () => Math.round(((globalThis.performance?.now() ?? Date.now()) - (w._cpuStartMs || 0)) * 1e6),
-      getHeapStatistics: () => ({ total_heap_size: 0, used_heap_size: 0, heap_size_limit: 256 * 1024 * 1024 }),
+      getHeapStatistics: () => ({ total_heap_size: 0, total_heap_size_executable: 0, total_physical_size: 0, total_available_size: 256 * 1024 * 1024, used_heap_size: 0, heap_size_limit: 256 * 1024 * 1024, malloced_memory: 0, peak_malloced_memory: 0, does_zap_garbage: 0, number_of_native_contexts: 1, number_of_detached_contexts: 0, externally_allocated_size: 0 }),
       findInRange: (from, ps, r) => ps.filter(p => range(from, p) <= r),
       findClosestByRange: (from, ps) => { let b = null, bd = Infinity; for (const p of ps) { const d = range(from, p); if (d < bd) { bd = d; b = p; } } return b; },
       findClosestByPath: (from, ps, o = {}) => {
@@ -117,9 +117,9 @@ export class World {
       if (m.build) { const s = get(m.build.target); if (s && s.exists) { const n = Math.min(o.store.energy || 0, o._parts(C.WORK) * C.BUILD_POWER, s.progressTotal - s.progress); s.progress += n; o.store.energy -= n;
         if (s.progress >= s.progressTotal) { this.remove(s); const blocked = isObstacle({ constructor: s._proto }) && this.at(s.x, s.y).some(c => c instanceof P.Creep); if (!blocked) { const st = new s._proto(this, s.x, s.y, s._owner); this.add(st); } } } }
       if (m.withdraw) { const t = get(m.withdraw.target); if (t) { const n = Math.min(m.withdraw.amt, t.store[m.withdraw.r] || 0, o.store.getFreeCapacity()); t.store[m.withdraw.r] -= n; o.store[m.withdraw.r] = (o.store[m.withdraw.r] || 0) + n; } }
-      if (m.transfer) { const t = get(m.transfer.target); if (t) { const r = m.transfer.r, n = Math.min(m.transfer.amt, o.store[r] || 0, Math.max(0, t.store.getFreeCapacity(r))); o.store[r] -= n; t.store[r] = (t.store[r] || 0) + n; } }
+      if (m.transfer) { const t = get(m.transfer.target); if (t && t._acceptsTransfer) { const n = Math.min(m.transfer.amt, o.store[m.transfer.r] || 0); if (n > 0 && m.transfer.r === t.resourceType) { o.store[m.transfer.r] -= n; t._scores[o._owner] = (t._scores[o._owner] || 0) + n; t._owner = o._owner; t._lastBy = o._owner; } } else if (t) { const r = m.transfer.r, n = Math.min(m.transfer.amt, o.store[r] || 0, Math.max(0, t.store.getFreeCapacity(r))); o.store[r] -= n; t.store[r] = (t.store[r] || 0) + n; } }
       if (m.pickup) { const t = get(m.pickup.target); if (t && t.exists) { const n = Math.min(t.amount, o.store.getFreeCapacity()); t.amount -= n; o.store[t.resourceType] = (o.store[t.resourceType] || 0) + n; if (t.amount <= 0) this.remove(t); } }
-      if (m.drop) { const n = Math.min(m.drop.amt, o.store.energy || 0); o.store.energy -= n; this._drop(o, n); }
+      if (m.drop) { const r = m.drop.r || C.RESOURCE_ENERGY; const n = Math.min(m.drop.amt, o.store[r] || 0); o.store[r] -= n; if (r === C.RESOURCE_ENERGY) this._drop(o, n); else if (n > 0) { const ex = this.at(o.x, o.y).find(q => q instanceof P.Resource && q.resourceType === r); if (ex) ex.amount += n; else this.add(new P.Resource(this, o.x, o.y, n, r)); } }
     }
     // 2b 生产 intent
     for (const [o, m] of I) {
@@ -164,7 +164,7 @@ export class World {
     if (n <= 0) return;
     const ct = this.at(o.x, o.y).find(r => r instanceof P.StructureContainer);
     if (ct) { const free = Math.max(0, ct.store.getFreeCapacity()); const into = Math.min(n, free); ct.store.energy = (ct.store.energy || 0) + into; n -= into; if (n <= 0) return; }
-    const ex = this.at(o.x, o.y).find(r => r instanceof P.Resource); if (ex) ex.amount += n; else this.add(new P.Resource(this, o.x, o.y, n));
+    const ex = this.at(o.x, o.y).find(r => r instanceof P.Resource && r.resourceType === C.RESOURCE_ENERGY); if (ex) ex.amount += n; else this.add(new P.Resource(this, o.x, o.y, n));
   }
   _spawnProgress(s) {
     const sp = s.spawning; if (!sp.creep.exists) { s.spawning = undefined; return; } if (--sp.remainingTime > 0) return;
@@ -234,7 +234,8 @@ export class World {
       if (o.store) { s.e = o.store.energy || 0; s.c = o.store._cap; }
       if (o instanceof P.Creep) { s.b = o.body.map(p => p.type[0] + (p.hits > 0 ? '' : '!')).join(','); if (o.spawning) s.sp = 1; s.f = o.fatigue; }
       if (o instanceof P.Source) { s.e = o.energy; s.c = o.energyCapacity; }
-      if (o instanceof P.Resource) s.e = o.amount;
+      if (o instanceof P.Resource) { s.e = o.amount; if (o.resourceType !== C.RESOURCE_ENERGY) s.rt = o.resourceType; }
+      if (o instanceof P.ScoreCollector) { s.rt = o.resourceType; s.sc = { ...o._scores }; s.stt = o.scoreTotal; }
       if (o instanceof P.BodyPart) s.bt = o.type;
       if (o instanceof P.ConstructionSite) { s.st = o._proto.name; s.p = o.progress; s.pt = o.progressTotal; }
       if (o instanceof P.StructureSpawn && o.spawning) s.spn = [o.spawning.needTime - o.spawning.remainingTime, o.spawning.needTime];

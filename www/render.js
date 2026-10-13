@@ -15,13 +15,14 @@ export function drawFrame(g, terrainC, f, prev, k = 1, sel) {
   g.drawImage(terrainC, 0, 0);
   const pm = prev ? new Map(prev.objs.map(o => [o.id, o])) : new Map();
   const pos = o => { const p = pm.get(o.id); if (!p || o.t !== 'Creep') return [cx(o.x), cx(o.y)]; return [cx(p.x + (o.x - p.x) * k), cx(p.y + (o.y - p.y) * k)]; };
-  const order = ['StructureRoad', 'BodyPart', 'Flag', 'ConstructionSite', 'Resource', 'Source', 'StructureContainer', 'StructureExtension', 'StructureWall', 'StructureSpawn', 'StructureTower', 'Creep', 'StructureRampart'];
+  const order = ['StructureRoad', 'BodyPart', 'Flag', 'ConstructionSite', 'Resource', 'Source', 'StructureContainer', 'StructureExtension', 'StructureWall', 'StructureSpawn', 'StructureTower', 'Creep', 'StructureRampart', 'ScoreCollector'];
   const objs = [...f.objs].sort((a, b) => order.indexOf(a.t) - order.indexOf(b.t));
   for (const o of objs) {
     const [x, y] = pos(o), col = COLORS[o.o] || COLORS.neutral;
     switch (o.t) {
       case 'StructureRoad': g.fillStyle = '#555'; g.beginPath(); g.arc(x, y, 1.5, 0, 7); g.fill(); break;
-      case 'Resource': g.fillStyle = COLORS.energy; g.beginPath(); g.arc(x, y, Math.min(3.5, 1 + Math.sqrt(o.e) / 8), 0, 7); g.fill(); break;
+      case 'ScoreCollector': g.strokeStyle = col || '#c9f'; g.lineWidth = 1.5; g.fillStyle = '#2a1838'; g.beginPath(); g.arc(x, y, 5, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#c9f'; g.beginPath(); g.arc(x, y, 2, 0, 7); g.fill(); break;
+      case 'Resource': g.fillStyle = o.rt ? '#c9f' : COLORS.energy; g.beginPath(); g.arc(x, y, Math.min(3.5, 1 + Math.sqrt(o.e) / 8), 0, 7); g.fill(); break;
       case 'Source': g.fillStyle = '#4a4222'; g.fillRect(x - 3.5, y - 3.5, 7, 7); g.fillStyle = COLORS.energy; const s = 6 * o.e / o.c; g.fillRect(x - s / 2, y - s / 2, s, s); break;
       case 'StructureContainer': g.fillStyle = '#181818'; g.strokeStyle = '#666'; g.lineWidth = 1; g.fillRect(x - 3, y - 3.5, 6, 7); g.strokeRect(x - 3, y - 3.5, 6, 7); g.fillStyle = COLORS.energy; { const h = 6 * o.e / o.c; g.fillRect(x - 2, y + 3 - h, 4, h); } break;
       case 'StructureExtension': g.strokeStyle = col; g.fillStyle = '#181818'; g.beginPath(); g.arc(x, y, 3, 0, 7); g.fill(); g.stroke(); g.fillStyle = COLORS.energy; g.beginPath(); g.arc(x, y, 2 * o.e / o.c, 0, 7); g.fill(); break;

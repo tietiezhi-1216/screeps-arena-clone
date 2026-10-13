@@ -76,9 +76,11 @@ export function modulesFor(world, pid) {
   const utils = { ...world.utils }; delete utils.searchPath;
   const arenaInfo = { name: world.arena.name, level: world.arena.level, season: world.arena.season, ticksLimit: world.arena.ticksLimit, cpuTimeLimit: world.arena.cpuTimeLimit, cpuTimeLimitFirstTick: world.arena.cpuTimeLimitFirstTick };
   const pf = { searchPath: world.utils.searchPath, CostMatrix };
+  const P = PROTOTYPES;
+  const CONST = Object.freeze({ ...C, STRUCTURE_PROTOTYPES: Object.freeze({ spawn: P.StructureSpawn, extension: P.StructureExtension, road: P.StructureRoad, constructedWall: P.StructureWall, rampart: P.StructureRampart, tower: P.StructureTower, container: P.StructureContainer }) });
   const mods = {
-    'game/constants': C, 'game/prototypes': PROTOTYPES, 'game/utils': utils, 'game/path-finder': pf, 'game/visual': { Visual },
-    'game': { arenaInfo, utils, prototypes: PROTOTYPES, constants: C, pathFinder: pf, visual: { Visual } },
+    'game/constants': CONST, 'game/prototypes': PROTOTYPES, 'game/utils': utils, 'game/path-finder': pf, 'game/visual': { Visual },
+    'game': { arenaInfo, utils, prototypes: PROTOTYPES, constants: CONST, pathFinder: pf, visual: { Visual } },
     'arena': { ...PROTOTYPES, ...(world.arenaModule || {}) },
   };
   for (const k of Object.keys(PROTOTYPES)) mods[`game/prototypes/${k.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()}`] = PROTOTYPES;

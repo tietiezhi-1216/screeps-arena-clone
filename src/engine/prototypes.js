@@ -27,6 +27,8 @@ export class GameObject {
   /** 控制本对象的 Flag（Capture the Flag）；无则 undefined。官方：GameObject.controlledBy */
   get controlledBy() { return this._controlledBy || undefined; }
   get ticksToDecay() { return undefined; }
+  /** 官方 GameObject.effects：Effect[]（{effect, ticksRemaining}）；无效果时为 undefined */
+  get effects() { return this._effects && this._effects.length ? this._effects.map(e => ({ ...e })) : undefined; }
   getRangeTo(p) { return range(this, p); }
   findClosestByRange(ps) { return this._w.utils.findClosestByRange(this, ps); }
   findClosestByPath(ps, o) { return this._w.utils.findClosestByPath(this, ps, o); }
@@ -151,9 +153,10 @@ export class Creep extends GameObject {
     if (!(this.store.energy > 0)) return ERR_NOT_ENOUGH_RESOURCES;
     this._intent('build', { target: t.id }); return OK;
   }
-  _res(r, amt) { return r !== C.RESOURCE_ENERGY || (amt !== undefined && !(amt > 0)); }
+  _res(r, amt) { return !(r === C.RESOURCE_ENERGY || (this._w.extraResources || []).includes(r)) || (amt !== undefined && !(amt > 0)); }
   transfer(t, r, amt) {
-    let e = this._pre(); if (e) return e; if (this._res(r, amt)) return ERR_INVALID_ARGS; if (!t || !t.exists || !t.store) return ERR_INVALID_TARGET;
+    let e = this._pre(); if (e) return e; if (this._res(r, amt)) return ERR_INVALID_ARGS; if (t && t.exists && t._acceptsTransfer) { if (range(this, t) > 1) return ERR_NOT_IN_RANGE; const h = this.store[r] || 0; amt ??= h; if (!h || h < amt) return ERR_NOT_ENOUGH_RESOURCES; if (r !== t.resourceType) return ERR_INVALID_ARGS; this._w.intent(this, 'transfer', { target: t.id, r, amt }); return OK; }
+    if (!t || !t.exists || !t.store) return ERR_INVALID_TARGET;
     if (range(this, t) > 1) return ERR_NOT_IN_RANGE; const have = this.store[r] || 0; amt ??= Math.min(have, t.store.getFreeCapacity(r));
     if (have < amt || !have) return ERR_NOT_ENOUGH_RESOURCES; if (t.store.getFreeCapacity(r) <= 0) return ERR_FULL;
     this._w.intent(this, 'transfer', { target: t.id, r, amt }); return OK;
@@ -167,6 +170,12 @@ export class Creep extends GameObject {
   }
   pickup(t) { let e = this._pre(); if (e) return e; if (!(t instanceof Resource) || !t.exists) return ERR_INVALID_TARGET; if (range(this, t) > 1) return ERR_NOT_IN_RANGE; if (this.store.getFreeCapacity() <= 0) return ERR_FULL; this._w.intent(this, 'pickup', { target: t.id }); return OK; }
   drop(r, amt) { let e = this._pre(); if (e) return e; if (this._res(r, amt)) return ERR_INVALID_ARGS; const have = this.store[r] || 0; amt ??= have; if (!have || have < amt) return ERR_NOT_ENOUGH_RESOURCES; this._w.intent(this, 'drop', { r, amt }); return OK; }
+}
+// arena/season_{alpha,beta}/collect_and_control：ScoreCollector（官方 typings 字段：my, resourceType, score, scoreTotal）
+export class ScoreCollector extends GameObject {
+  constructor(w, x, y, resourceType, scoreTotal, owner = null) { super(w, x, y); this.resourceType = resourceType; this.scoreTotal = scoreTotal; Object.defineProperty(this, '_owner', { value: owner, writable: true }); Object.defineProperty(this, '_scores', { value: {} }); Object.defineProperty(this, '_acceptsTransfer', { value: true }); }
+  get my() { return this._owner == null ? undefined : this._owner === this._w.current; }
+  get score() { return this._owner == null ? 0 : (this._scores[this._owner] || 0); }
 }
 export const TYPE_NAME = new Map([[Creep, 'creep'], [StructureTower, 'tower'], [StructureWall, 'constructedWall'], [StructureSpawn, 'spawn'], [StructureExtension, 'extension'], [StructureRampart, 'rampart'], [StructureRoad, 'road'], [StructureContainer, 'container']]);
 export const PROTOTYPES = { GameObject, Creep, Structure, OwnedStructure, StructureSpawn, StructureTower, StructureContainer, StructureExtension, StructureRampart, StructureRoad, StructureWall, Source, Resource, ConstructionSite, Flag, Store, Spawning };

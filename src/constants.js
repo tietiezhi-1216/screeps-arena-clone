@@ -31,3 +31,6 @@ export const TOWER_CAPACITY = 10, TOWER_COOLDOWN = 10, TOWER_ENERGY_COST = 10, T
 export const OBSTACLE_OBJECT_TYPES = ['creep', 'tower', 'constructedWall', 'spawn', 'extension', 'link'];
 export const EFF_ATTACK_BOOST = 'eff_attack_boost', EFF_CONSTRUCTION_BOOST = 'eff_construction_boost', EFF_HEAL_BOOST = 'eff_heal_boost',
   EFF_MOVE_BOOST = 'eff_move_boost', EFF_RANGED_ATTACK_BOOST = 'eff_ranged_attack_boost', EFF_WORK_BOOST = 'eff_work_boost';
+export const EFF_ATTACK_MODIFIER = 'eff_attack_modifier', EFF_RANGED_ATTACK_MODIFIER = 'eff_ranged_attack_modifier', EFF_HEAL_MODIFIER = 'eff_heal_modifier',
+  EFF_DAMAGE_TAKEN_MODIFIER = 'eff_damage_taken_modifier', EFF_FATIGUE_MODIFIER = 'eff_fatigue_modifier', EFF_HITS_LOSS = 'eff_hits_loss';
+// STRUCTURE_PROTOTYPES：官方 typings 仅声明未给值；本项目按官方 structureType 名映射到原型类（在 sandbox 中注入）。

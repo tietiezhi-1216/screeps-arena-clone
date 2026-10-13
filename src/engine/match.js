@@ -1,8 +1,9 @@
 import { PlayerRuntime } from './sandbox.js';
 import { createMatch as spawnAndSwamp, createAdvanced as spawnAndSwampAdvanced } from '../modes/spawnAndSwamp.js';
 import { createMatch as captureTheFlag, createAdvanced as captureTheFlagAdvanced } from '../modes/captureTheFlag.js';
-export const MODES = { 'spawn-and-swamp': spawnAndSwamp, 'spawn-and-swamp-advanced': spawnAndSwampAdvanced, 'capture-the-flag': captureTheFlag, 'capture-the-flag-advanced': captureTheFlagAdvanced };
-export const MODE_NAMES = { 'spawn-and-swamp': 'Spawn and Swamp（基础）', 'spawn-and-swamp-advanced': 'Spawn and Swamp（高级）', 'capture-the-flag': 'Capture the Flag（基础）', 'capture-the-flag-advanced': 'Capture the Flag（高级）' };
+import { createMatch as collectAndControl, createAdvanced as collectAndControlAdvanced } from '../modes/collectAndControl.js';
+export const MODES = { 'collect-and-control': collectAndControl, 'collect-and-control-advanced': collectAndControlAdvanced, 'spawn-and-swamp': spawnAndSwamp, 'spawn-and-swamp-advanced': spawnAndSwampAdvanced, 'capture-the-flag': captureTheFlag, 'capture-the-flag-advanced': captureTheFlagAdvanced };
+export const MODE_NAMES = { 'collect-and-control': 'Collect and Control（基础）', 'collect-and-control-advanced': 'Collect and Control（高级）', 'spawn-and-swamp': 'Spawn and Swamp（基础）', 'spawn-and-swamp-advanced': 'Spawn and Swamp（高级）', 'capture-the-flag': 'Capture the Flag（基础）', 'capture-the-flag-advanced': 'Capture the Flag（高级）' };
 // 逐 tick 推进的对局（联机房主/实时观战用）
 export function createLiveMatch({ mode = 'spawn-and-swamp', seed = 1, scripts, compile, hardRun, onCompiled, cpuMode = 'budget' } = {}) {
   const players = ['p1', 'p2'];
