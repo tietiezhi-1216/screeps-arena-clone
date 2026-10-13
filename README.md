@@ -19,8 +19,8 @@ npm run match            # 命令行跑一局：bots/rush.mjs vs bots/kite.mjs
 
 ## 打包安卓
 ```bash
-APP_VERSION=0.2.0 VERSION_CODE=20 ./scripts/build-android.sh   # JDK17 / Android SDK 默认取 ~/sdk
-./scripts/sign.sh screeps-arena-v0.2.0.apk                      # 签名信息来自环境变量或本地 keystore.properties（已 gitignore）
+APP_VERSION=0.4.0 VERSION_CODE=40 ./scripts/build-android.sh   # JDK17 / Android SDK 默认取 ~/sdk
+./scripts/sign.sh screeps-arena-v0.4.0.apk                      # 签名信息来自环境变量或本地 keystore.properties（已 gitignore）
 ```
 `keystore.properties` 示例（不要提交）：`storeFile=~/keys/release.p12` / `storePassword=…` / `keyAlias=release`。
 
