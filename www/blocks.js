@@ -20,7 +20,6 @@ const q = s => JSON.stringify(String(s));
 const PARTS = [['move', '移动', '#a9b7c6', 50], ['work', '工作', '#ffe56d', 100], ['carry', '搬运', '#777777', 50], ['attack', '攻击', '#f93842', 80], ['ranged_attack', '远程', '#5d80b2', 150], ['heal', '治疗', '#65fd62', 250], ['tough', '护甲', '#ffffff', 10]];
 const PI = Object.fromEntries(PARTS.map(p => [p[0], p]));
 const ORDER = ['tough', 'work', 'carry', 'attack', 'ranged_attack', 'heal', 'move'];
-const PRESETS = [['战士', 'tough:2,attack:3,move:5'], ['弓箭手', 'ranged_attack:2,move:2'], ['医疗兵', 'heal:1,move:1'], ['搬运工', 'carry:3,move:3'], ['工人', 'work:2,carry:2,move:4']];
 const parseBody = s => { const c = {}; for (const t of String(s || '').split(',')) { const [k, n] = t.trim().split(':'); if (PI[k]) c[k] = (c[k] || 0) + (n == null ? 1 : Math.max(0, Math.min(50, +n || 0))); } return c; };
 const bodyStr = c => ORDER.filter(k => c[k] > 0).map(k => `${k}:${c[k]}`).join(',');
 const bodyList = c => ORDER.flatMap(k => Array(c[k] || 0).fill(k));
@@ -35,29 +34,78 @@ class FieldBody extends Blockly.Field {
   showEditor_() { openBodyPanel(this.getValue(), val => this.setValue(val)); }
 }
 Blockly.fieldRegistry.register('field_body', FieldBody);
-function openBodyPanel(value, done) {
-  let c = parseBody(value); const host = document.getElementById('editor') || document.body;
-  const d = document.createElement('div'); d.id = 'bodyPanel'; d.className = 'dlg'; host.appendChild(d);
-  const draw = () => { const n = bodyN(c), cost = bodyCost(c);
-    d.innerHTML = `<div class="box bp"><div class="dt">选择身体部件</div>
-      <div class="bpPre">${PRESETS.map(([t, b]) => `<button data-pre="${b}">${t}</button>`).join('')}</div>
+const esc = t => String(t).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+// 身体部件面板；opts.name 不为 undefined 时带“身份名称”输入框（新建/编辑身份）
+function openBodyPanel(value, done, opts = {}) {
+  let c = parseBody(value); const withName = opts.name !== undefined; let name = opts.name || '', err = '';
+  const d = document.createElement('div'); d.id = 'bodyPanel'; d.className = 'dlg'; document.body.appendChild(d);
+  const draw = () => { const n = bodyN(c), cost = bodyCost(c), ok = n && cost <= 1000 && (!withName || name.trim());
+    d.innerHTML = `<div class="box bp"><div class="dt">${esc(opts.title || '选择身体部件')}</div>
+      ${withName ? `<input class="bpName" maxlength="12" placeholder="身份名称，比如 前锋" value="${esc(name)}"><div class="bpErr">${esc(err)}</div>` : ''}
       <div class="bpList">${PARTS.map(([k, t, col, co]) => `<div class="bpRow"><i style="background:${col}"></i><span class="bpN">${t}</span><span class="bpC">${co}</span><button data-m="${k}">−</button><b>${c[k] || 0}</b><button data-p="${k}">+</button></div>`).join('')}</div>
       <div class="bpBar">${bodyList(c).map(k => `<i style="background:${PI[k][2]}"></i>`).join('')}</div>
       <div class="bpSum"><span>${n}/50 个部件</span><span class="${cost > 1000 ? 'bad' : ''}">需要 <b>${cost}</b> 能量${cost > 1000 ? '（超过基地上限 1000）' : ''}</span></div>
-      <div class="row2"><button data-a="no" class="btn">取消</button><button data-a="ok" class="btn primary"${n && cost <= 1000 ? '' : ' disabled'}>确定</button></div></div>`; };
+      <div class="row2"><button data-a="no" class="btn">取消</button><button data-a="ok" class="btn primary"${ok ? '' : ' disabled'}>确定</button></div></div>`; };
   draw();
+  d.addEventListener('input', e => { if (!e.target.classList.contains('bpName')) return; name = e.target.value; err = ''; const okb = d.querySelector('[data-a=ok]'); okb.disabled = !(bodyN(c) && bodyCost(c) <= 1000 && name.trim()); d.querySelector('.bpErr').textContent = ''; });
   d.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) { if (e.target === d) d.remove(); return; }
-    if (b.dataset.pre) c = parseBody(b.dataset.pre);
-    else if (b.dataset.p) { if (bodyN(c) < 50) c[b.dataset.p] = (c[b.dataset.p] || 0) + 1; }
+    if (b.dataset.p) { if (bodyN(c) < 50) c[b.dataset.p] = (c[b.dataset.p] || 0) + 1; }
     else if (b.dataset.m) c[b.dataset.m] = Math.max(0, (c[b.dataset.m] || 0) - 1);
     else if (b.dataset.a === 'no') return d.remove();
-    else if (b.dataset.a === 'ok') { d.remove(); return done(bodyStr(c)); }
+    else if (b.dataset.a === 'ok') { if (withName) { const e2 = opts.check?.(name.trim()); if (e2) { err = e2; draw(); return; } }
+      d.remove(); return withName ? done(name.trim(), bodyStr(c)) : done(bodyStr(c)); }
     draw(); });
+  if (withName) setTimeout(() => d.querySelector('.bpName')?.focus(), 50);
+  return d;
 }
 
+// ---------- 玩家自定义身份（随脚本保存；默认没有任何身份） ----------
+const NONE = '__none', NEW = '__new', MANAGE = '__manage';
+const Roles = { list: [], // [{ name, body }]
+  get(n) { return this.list.find(r => r.name === n); },
+  check(n, self) { if (!n) return '请输入名称'; if (n === '兵' || n.startsWith('__')) return '这个名字不能用'; if (this.list.some(r => r.name === n && r !== self)) return '已经有同名身份'; return ''; },
+  add(name, body) { const r = { name, body }; this.list.push(r); return r; },
+  rename(ws, old, nw) { const r = this.get(old); if (!r) return; r.name = nw; forRoleFields(ws, f => { if (f.getValue() === old) { f.getOptions(false); f.setValue(nw); } }); },
+  remove(ws, n) { this.list = this.list.filter(r => r.name !== n); forRoleFields(ws, f => { if (f.getValue() === n) { f.getOptions(false); f.setValue(NONE); } }); },
+};
+const forRoleFields = (ws, fn) => { if (!ws) return; for (const b of ws.getAllBlocks(false)) { const f = b.getField('ROLE'); if (f) fn(f); } };
+Blockly.serialization.registry.register('arenaRoles', {
+  save: () => Roles.list.length ? Roles.list.map(r => ({ name: r.name, body: r.body })) : null,
+  load: (st) => { Roles.list = (Array.isArray(st) ? st : []).filter(r => r && r.name).map(r => ({ name: String(r.name), body: bodyStr(parseBody(r.body)) || 'move:1' })); },
+  clear: () => { Roles.list = []; }, priority: 90, // 先于积木加载，下拉框才能认出身份名
+});
+const roleOptions = all => () => [...(all ? [['兵', 'all']] : []), ['选择身份', NONE], ...Roles.list.map(r => [r.name, r.name]), ['＋ 新建身份', NEW], ...(Roles.list.length ? [['管理身份…', MANAGE]] : [])];
+function roleValidator(v) {
+  const ws = this.getSourceBlock()?.workspace; if (ws?.isFlyout) return v === NEW || v === MANAGE ? null : v;
+  if (v === NEW) { setTimeout(() => newRole(ws, (name) => { this.getOptions(false); this.setValue(name); }), 0); return null; }
+  if (v === MANAGE) { setTimeout(() => manageRoles(ws), 0); return null; }
+  return v;
+}
+function fireChange(ws) { if (ws) ws.fireChangeListener(new (Blockly.Events.get(Blockly.Events.FINISHED_LOADING))(ws)); }
+function newRole(ws, then) { openBodyPanel('', (name, body) => { Roles.add(name, body); then?.(name); fireChange(ws); }, { name: '', title: '新建身份', check: n => Roles.check(n) }); }
+function manageRoles(ws) {
+  const d = document.createElement('div'); d.id = 'bodyPanel'; d.className = 'dlg'; document.body.appendChild(d);
+  const draw = () => { d.innerHTML = `<div class="box bp"><div class="dt">管理身份</div><div class="rlList">${Roles.list.map((r, i) => `<div class="rlRow"><span class="rlN">${esc(r.name)}</span><span class="rlB">${bodyText(parseBody(r.body))}</span><button data-e="${i}" class="btn sm">编辑</button><button data-x="${i}" class="btn sm danger">删除</button></div>`).join('') || '<div class="rlEmpty">还没有身份</div>'}</div>
+    <div class="row2"><button data-a="new" class="btn">＋ 新建身份</button><button data-a="no" class="btn primary">完成</button></div></div>`; };
+  draw();
+  d.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) { if (e.target === d) d.remove(); return; }
+    if (b.dataset.a === 'no') return d.remove();
+    if (b.dataset.a === 'new') { d.remove(); return newRole(ws, () => manageRoles(ws)); }
+    const r = Roles.list[+(b.dataset.e ?? b.dataset.x)]; if (!r) return;
+    if (b.dataset.x != null) { if (b.dataset.sure) { Roles.remove(ws, r.name); fireChange(ws); draw(); } else { b.dataset.sure = 1; b.textContent = '确认删除'; } return; }
+    d.remove(); openBodyPanel(r.body, (name, body) => { r.body = body; if (name !== r.name) Roles.rename(ws, r.name, name); fireChange(ws); manageRoles(ws); }, { name: r.name, title: '编辑身份', check: n => Roles.check(n, r) });
+  });
+}
+class FieldRole extends Blockly.FieldDropdown {
+  constructor(all) { super(roleOptions(all)); this.setValidator(roleValidator); }
+  static fromJson(o) { return new FieldRole(!!o.all); }
+}
+Blockly.fieldRegistry.register('field_role', FieldRole);
+const roleDD = all => ({ type: 'field_role', name: 'ROLE', all });
+const roleBody = n => bodyList(parseBody(Roles.get(n)?.body));
+const isRole = n => !!Roles.get(n);
+
 // ---------- 下拉选项 ----------
-const ROLES = [['战士', 'warrior'], ['弓箭手', 'archer'], ['医疗兵', 'medic'], ['搬运工', 'hauler'], ['工人', 'worker']];
-const ROLES_ALL = [['兵', 'all'], ...ROLES];
 const TARGETS = [['敌人', 'enemy'], ['敌方基地', 'enemySpawn'], ['我的基地', 'mySpawn'], ['受伤的队友', 'hurtAlly'], ['队友', 'ally'], ['有能量的箱子', 'container'], ['地上的能量', 'energy'], ['能量矿', 'source'],
   ['还没夺到的旗帜', 'flag'], ['我的旗帜', 'myFlag'], ['身体部件', 'bodypart'], ['分数', 'score'], ['分数收集器', 'collector'], ['敌方塔', 'enemyTower'], ['我的工地', 'site']];
 const BUILD = [['塔', 'StructureTower'], ['堡垒', 'StructureRampart'], ['扩展', 'StructureExtension'], ['墙', 'StructureWall'], ['箱子', 'StructureContainer']];
@@ -65,20 +113,20 @@ const PARTDD = PARTS.map(p => [p[1], p[0]]);
 const me = 'creep';
 
 // ---------- 基地 ----------
-def('base', 'b_spawn', { message0: '我的基地 制造 %1 %2', args0: [{ type: 'field_dropdown', name: 'ROLE', options: ROLES }, { type: 'field_body', name: 'BODY', value: 'tough:2,attack:3,move:5' }], ...stmt, tooltip: '基地空闲且能量够时，造一个兵' },
-  b => `H.spawn(${q(b.getFieldValue('ROLE'))}, ${JSON.stringify(bodyList(parseBody(b.getFieldValue('BODY'))))});\n`);
-def('base', 'b_keep', { message0: '保持 %1 有 %2 个 %3', args0: [{ type: 'field_dropdown', name: 'ROLE', options: ROLES }, { type: 'field_number', name: 'N', value: 3, min: 0, max: 50, precision: 1 }, { type: 'field_body', name: 'BODY', value: 'tough:2,attack:3,move:5' }], ...stmt, tooltip: '不够数量时自动补充；排在上面的先造' },
-  b => `H.keep(${q(b.getFieldValue('ROLE'))}, ${+b.getFieldValue('N')}, ${JSON.stringify(bodyList(parseBody(b.getFieldValue('BODY'))))});\n`);
+def('base', 'b_spawn', { message0: '我的基地 制造 %1', args0: [roleDD(false)], ...stmt, tooltip: '基地空闲且能量够时，按身份的身体部件造一个兵' },
+  b => isRole(b.getFieldValue('ROLE')) ? `H.spawn(${q(b.getFieldValue('ROLE'))}, ${JSON.stringify(roleBody(b.getFieldValue('ROLE')))});\n` : '');
+def('base', 'b_keep', { message0: '保持 %1 有 %2 个', args0: [roleDD(false), { type: 'field_number', name: 'N', value: 3, min: 0, max: 50, precision: 1 }], ...stmt, tooltip: '不够数量时按身份的身体部件自动补充；排在上面的先造' },
+  b => isRole(b.getFieldValue('ROLE')) ? `H.keep(${q(b.getFieldValue('ROLE'))}, ${+b.getFieldValue('N')}, ${JSON.stringify(roleBody(b.getFieldValue('ROLE')))});\n` : '');
 def('base', 'b_towers', { message0: '我的塔 自动 %1', args0: [{ type: 'field_dropdown', name: 'M', options: [['攻击最近的敌人', 'attack'], ['治疗受伤的队友', 'heal'], ['先治疗再攻击', 'both']] }], ...stmt },
   b => `H.towers(${q(b.getFieldValue('M'))});\n`);
-def('base', 'b_build', { message0: '在 %1 旁边 放一个 %2 工地', args0: [{ type: 'input_value', name: 'T' }, { type: 'field_dropdown', name: 'S', options: BUILD }], ...stmt, tooltip: '只放一次；之后让工人去“建造工地”' },
+def('base', 'b_build', { message0: '在 %1 旁边 放一个 %2 工地', args0: [{ type: 'input_value', name: 'T' }, { type: 'field_dropdown', name: 'S', options: BUILD }], ...stmt, tooltip: '只放一次；之后让带“工作”部件的兵去“建造工地”' },
   b => `H.place(${v(b, 'T')}, ${b.getFieldValue('S')});\n`);
 
 // ---------- 兵 ----------
-def('unit', 'u_each', { message0: '每个我的 %1 做：', args0: [{ type: 'field_dropdown', name: 'ROLE', options: ROLES_ALL }], message1: '%1', args1: [{ type: 'input_statement', name: 'DO' }], previousStatement: null, nextStatement: null, tooltip: '里面的动作都由“这个兵”执行' },
+def('unit', 'u_each', { message0: '每个我的 %1 做：', args0: [roleDD(true)], message1: '%1', args1: [{ type: 'input_statement', name: 'DO' }], previousStatement: null, nextStatement: null, tooltip: '里面的动作都由“这个兵”执行' },
   b => `for (const ${me} of H.mine(${q(b.getFieldValue('ROLE'))})) {\n${JS.statementToCode(b, 'DO')}}\n`);
 def('unit', 'u_fight', { message0: '按身体自动战斗', ...stmt, tooltip: '有攻击就近战，有远程就边打边退，有治疗就救队友' }, () => `H.fight(${me});\n`);
-def('unit', 'u_role', { message0: '这个兵是 %1', args0: [{ type: 'field_dropdown', name: 'ROLE', options: ROLES }], output: 'Boolean' }, b => [`(!!${me} && H.roleOf(${me}) === ${q(b.getFieldValue('ROLE'))})`, OA]);
+def('unit', 'u_role', { message0: '这个兵是 %1', args0: [roleDD(false)], output: 'Boolean' }, b => [`(!!${me} && H.roleOf(${me}) === ${q(b.getFieldValue('ROLE'))})`, OA]);
 
 // ---------- 动作（由“这个兵”执行；够不着会自己走过去） ----------
 def('act', 'a_attack', { message0: '靠近并攻击 %1', args0: [{ type: 'input_value', name: 'T' }], ...stmt }, b => `H.attack(${me}, ${v(b, 'T')});\n`);
@@ -114,7 +162,7 @@ def('cond', 'c_cmp', { message0: '%1 %2 %3', args0: [{ type: 'input_value', name
 
 // ---------- 数值 ----------
 def('num', 'n_num', { message0: '%1', args0: [{ type: 'field_number', name: 'N', value: 0 }], output: 'Number' }, b => [String(+b.getFieldValue('N')), OA]);
-def('num', 'n_count', { message0: '我的 %1 数量', args0: [{ type: 'field_dropdown', name: 'ROLE', options: ROLES_ALL }], output: 'Number' }, b => [`H.mine(${q(b.getFieldValue('ROLE'))}).length`, OF]);
+def('num', 'n_count', { message0: '我的 %1 数量', args0: [roleDD(true)], output: 'Number' }, b => [`H.mine(${q(b.getFieldValue('ROLE'))}).length`, OF]);
 def('num', 'n_enemies', { message0: '敌人数量', output: 'Number' }, () => ['H.foes().length', OF]);
 def('num', 'n_energy', { message0: '基地能量', output: 'Number' }, () => ['H.baseEnergy()', OF]);
 def('num', 'n_tick', { message0: '游戏时间', output: 'Number' }, () => ['getTicks()', OF]);
@@ -206,11 +254,12 @@ const THEME = Blockly.Theme.defineTheme('arena-dark', { name: 'arena-dark', base
 
 // 交互沿用 screeps-blockly-mobile：顶部分类 chips → 全宽积木列表（按最宽积木缩放、竖向滚动）；点按 = 添加到可见区域；长按 = 拖出
 window.ArenaBlocks = {
-  CATS, toCode,
+  CATS, toCode, Roles,
   create(div, saved, onChange) {
     const ws = Blockly.inject(div, { toolbox: { kind: 'flyoutToolbox', contents: [] }, trashcan: false, renderer: 'zelos', theme: THEME,
-      zoom: { controls: false, wheel: true, pinch: true, startScale: 0.8, minScale: 0.4, maxScale: 2 }, move: { scrollbars: true, drag: true, wheel: true },
+      zoom: { controls: false, wheel: true, pinch: true, startScale: 0.8, minScale: 0.4, maxScale: 2 }, move: { scrollbars: false, drag: true, wheel: true },
       grid: { spacing: 24, length: 2, colour: '#2c3748', snap: true } });
+    Roles.list = [];
     if (saved) { try { Blockly.serialization.workspaces.load(saved, ws); } catch (e) { ws.clear(); } } // 默认空白工作区（无内置程序）
     const fly = ws.getFlyout(); let flyScale = 0.8, lpArmed = false;
     fly.getFlyoutScale = () => flyScale;
@@ -252,7 +301,7 @@ window.ArenaBlocks = {
       },
       closeCat: close, flyOpen: () => fly.isVisible(),
       code: () => toCode(ws), resize: () => Blockly.svgResize(ws),
-      load(state) { Blockly.Events.disable(); ws.clear(); if (state) try { Blockly.serialization.workspaces.load(state, ws); } catch (e) {} Blockly.Events.enable(); ws.clearUndo(); onChange(toCode(ws), Blockly.serialization.workspaces.save(ws)); },
+      load(state) { Blockly.Events.disable(); ws.clear(); Roles.list = []; if (state) try { Blockly.serialization.workspaces.load(state, ws); } catch (e) {} Blockly.Events.enable(); ws.clearUndo(); onChange(toCode(ws), Blockly.serialization.workspaces.save(ws)); },
       undo: r => ws.undo(!!r), zoom: d => ws.zoomCenter(d), center: () => ws.scrollCenter(),
       deleteSelected() { const s = Blockly.getSelected && Blockly.getSelected(); if (s && s.workspace === ws && s.isDeletable()) s.dispose(true, true); },
       count: () => ws.getAllBlocks(false).length,

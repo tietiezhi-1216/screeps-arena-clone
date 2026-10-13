@@ -6,7 +6,10 @@ const require = createRequire(import.meta.url);
 const Blockly = require('blockly'); Blockly.JavaScript = require('blockly/javascript').javascriptGenerator;
 globalThis.Blockly = Blockly; globalThis.window = globalThis;
 new Function(fs.readFileSync(new URL('../www/blocks.js', import.meta.url), 'utf8'))();
-const gen = blocks => { const ws = new Blockly.Workspace(); Blockly.serialization.workspaces.load({ blocks: { languageVersion: 0, blocks } }, ws); return window.ArenaBlocks.toCode(ws); };
+// 旧写法 { ROLE, BODY } 自动转成玩家自定义身份（arenaRoles）
+const rolesOf = (o, acc = new Map()) => { if (o && typeof o === 'object') { if (o.fields?.BODY && o.fields.ROLE) { acc.set(o.fields.ROLE, o.fields.BODY); delete o.fields.BODY; } for (const v of Object.values(o)) rolesOf(v, acc); } return acc; };
+const gen = (blocks, extra = []) => { const ws = new Blockly.Workspace(); const r = rolesOf(blocks); const arenaRoles = [...extra, ...[...r].map(([name, body]) => ({ name, body }))];
+  Blockly.serialization.workspaces.load({ arenaRoles, blocks: { languageVersion: 0, blocks } }, ws); return window.ArenaBlocks.toCode(ws); };
 const chain = (...bs) => { for (let i = bs.length - 2; i >= 0; i--) bs[i].next = { block: bs[i + 1] }; return bs[0]; };
 const T = k => ({ block: { type: 't_near', fields: { K: k } } });
 const each = (role, ...acts) => ({ type: 'u_each', fields: { ROLE: role }, inputs: { DO: { block: chain(...acts) } } });
@@ -38,4 +41,31 @@ test('Collect and Control: haulers score points', () => {
   const code = gen([chain({ type: 'b_keep', fields: { ROLE: 'hauler', N: 4, BODY: 'carry:2,move:2' } }, each('hauler', { type: 'a_score' }))]);
   const r = runMatch({ mode: 'collect-and-control', seed: 2, maxTicks: 600, scripts: [code, 'export function loop(){}'] }); noErr(r);
   const sc = r.frames.at(-1).objs.filter(o => o.t === 'ScoreCollector').reduce((a, c) => a + (c.sc?.p1 || 0), 0); assert.ok(sc > 0, 'score ' + sc);
+});
+
+test('roles: no built-in roles, only player-created ones (+ 新建/管理 entries)', () => {
+  const src = fs.readFileSync(new URL('../www/blocks.js', import.meta.url), 'utf8');
+  for (const w of ['战士', '弓箭手', '医疗兵', '搬运工', '工人']) assert.ok(!src.includes(w), 'built-in role left: ' + w);
+  const ws = new Blockly.Workspace(); Blockly.serialization.workspaces.load({ blocks: { languageVersion: 0, blocks: [{ type: 'b_keep' }, { type: 'u_each', y: 200 }] } }, ws);
+  const [keep, each] = ws.getTopBlocks(true);
+  assert.deepEqual(keep.getField('ROLE').getOptions().map(o => o[1]), ['__none', '__new']);
+  assert.deepEqual(each.getField('ROLE').getOptions().map(o => o[1]), ['all', '__none', '__new']);
+  assert.ok(!window.ArenaBlocks.toCode(ws).includes('H.keep'), 'unset role generates nothing');
+  assert.equal(Blockly.serialization.workspaces.save(ws).arenaRoles, undefined);
+});
+test('roles: saved with script, drive dropdown + code, rename and delete', () => {
+  const ws = new Blockly.Workspace(); const R = window.ArenaBlocks.Roles;
+  Blockly.serialization.workspaces.load({ arenaRoles: [{ name: '前锋', body: 'move:2,attack:2' }, { name: '奶妈', body: 'heal:1,move:1' }], blocks: { languageVersion: 0, blocks: [{ type: 'b_keep', fields: { ROLE: '前锋', N: 4 }, next: { block: { type: 'u_each', fields: { ROLE: '前锋' } } } }] } }, ws);
+  const keep = ws.getTopBlocks(true)[0];
+  assert.deepEqual(keep.getField('ROLE').getOptions().map(o => o[1]), ['__none', '前锋', '奶妈', '__new', '__manage']);
+  assert.match(window.ArenaBlocks.toCode(ws), /H\.keep\("前锋", 4, \["attack","attack","move","move"\]\)/);
+  assert.deepEqual(Blockly.serialization.workspaces.save(ws).arenaRoles, [{ name: '前锋', body: 'attack:2,move:2' }, { name: '奶妈', body: 'heal:1,move:1' }]);
+  assert.equal(R.check('奶妈'), '已经有同名身份'); assert.ok(R.check('')); assert.equal(R.check('坦克'), '');
+  R.rename(ws, '前锋', '先锋'); assert.ok(ws.getAllBlocks(false).every(b => b.getFieldValue('ROLE') === '先锋'));
+  assert.match(window.ArenaBlocks.toCode(ws), /H\.mine\("先锋"\)/);
+  R.remove(ws, '先锋'); assert.equal(keep.getFieldValue('ROLE'), '__none'); assert.ok(!window.ArenaBlocks.toCode(ws).includes('H.keep'));
+});
+test('roles: custom role spawns real creeps tagged with its name', () => {
+  const code = gen([chain({ type: 'b_keep', fields: { ROLE: '小兵', N: 3 } }, each('小兵', { type: 'a_attack', inputs: { T: T('enemySpawn') } }))], [{ name: '小兵', body: 'attack:1,move:1' }]);
+  const r = runMatch({ seed: 3, maxTicks: 200, scripts: [code, 'export function loop(){}'] }); noErr(r); assert.ok(ownCreeps(r, 'p1').length >= 2);
 });

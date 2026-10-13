@@ -159,3 +159,26 @@ input:focus{border-color:var(--acc)}
 
 #ver.verTap{cursor:pointer;padding:6px 12px;margin:-6px 0 -4px;touch-action:manipulation}#ver.verTap:active{color:var(--muted)}
 #toast{position:fixed;left:50%;bottom:calc(64px + var(--bot,0px));transform:translateX(-50%);z-index:2147483001;background:#000c;color:#fff;font-size:13px;padding:8px 14px;border-radius:4px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s}#toast.on{opacity:1}
+
+/* v0.10.2 积木编辑器：工作区无边框铺满，无滚动条，分类栏在底部，编辑按钮左上小图标列 */
+#editor.on{display:flex!important;flex-direction:column;padding:0}
+#editor .edbar{flex:0 0 auto;height:calc(44px + var(--sat));padding:var(--sat) calc(6px + var(--sar)) 0 calc(6px + var(--sal));border-bottom:1px solid var(--line)}
+#editor .edbar .btn{white-space:nowrap}
+#blocklyDiv{flex:1;min-height:0;margin:0;border:0;border-radius:0;padding:0}
+#blocklyDiv .blocklyScrollbarHorizontal,#blocklyDiv .blocklyScrollbarVertical{display:none!important}
+#edTools{left:calc(8px + var(--sal));right:auto!important;top:8px;bottom:auto;gap:4px}
+#edTools button{width:32px;height:32px;border-radius:6px;background:#2A2F3A;border:0}
+#edTools button .ic{font-size:18px}
+#edEmpty{top:42%;font-size:12px;color:var(--faint);opacity:.7;display:block;text-align:center}
+#cats{order:3;flex:0 0 auto;flex-direction:row!important;overflow-x:auto!important;overflow-y:hidden!important;gap:4px;padding:6px calc(6px + var(--sar)) calc(6px + var(--sab)) calc(6px + var(--sal));border:0!important;border-top:1px solid var(--line)!important;background:var(--panel)}
+#cats button{height:28px!important;font-size:12px;padding:0 9px;white-space:nowrap}
+#cats button .ic{font-size:14px}
+#blocklyDiv .blocklyMainBackground{stroke:none!important}
+#blocklyDiv .blocklyFlyoutBackground{stroke:none}
+.bpName{height:38px;padding:0 10px;border:1px solid var(--line);border-radius:3px;background:var(--row);color:var(--text);font-size:14px;outline:none}.bpName:focus{border-color:var(--acc)}
+.bpErr{min-height:0;font-size:12px;color:var(--acc)}.bpErr:empty{display:none}
+.rlList{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:3px;max-height:50vh;overflow:auto}
+.rlRow{display:flex;align-items:center;gap:6px;min-height:44px;padding:4px 6px 4px 10px;background:var(--row)}.rlRow+.rlRow{border-top:1px solid var(--line)}
+.rlN{font-weight:600;white-space:nowrap}.rlB{flex:1;min-width:0;color:var(--mute);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rlRow .btn{flex:0 0 auto;white-space:nowrap;height:30px;padding:0 10px}.rlRow .danger{color:var(--acc)}.rlEmpty{padding:14px;text-align:center;color:var(--faint);font-size:13px}
+@media (orientation:landscape){#bodyPanel .bpName,#bodyPanel .bpErr{grid-column:1/3}}
