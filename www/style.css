@@ -105,7 +105,7 @@ input:focus{border-color:var(--acc)}
  .home{display:grid;grid-template-columns:1fr 1fr;column-gap:28px;row-gap:14px;padding:calc(20px + var(--top)) max(28px,var(--r)) 14px max(28px,var(--l));align-content:center;max-width:900px}
  .home .brand{grid-column:1}.home .cur{grid-column:1}.home .menu{grid-column:2;grid-row:1/span 3;margin:0}.home .foot{grid-column:1/3}
  .split{flex-direction:row}.side{flex-direction:column;justify-content:flex-end;width:220px;border-top:0;border-left:1px solid var(--line)}.side .btn{flex:0 0 auto}
- .mcards{grid-template-columns:repeat(3,1fr)}.mc{aspect-ratio:auto;height:calc(100vh - 48px - 30px - var(--top) - var(--bot))}
+ .mcards{grid-template-columns:repeat(3,1fr);max-width:none;padding-top:24px}#modes .body{max-width:960px}.mc{aspect-ratio:16/11}
  .banner{display:none}.mc .md{display:none}
  #editor.on{display:grid;grid-template-columns:1fr 132px;grid-template-rows:48px 1fr}
  .edbar{grid-column:1/3}#blocklyDiv{grid-column:1;grid-row:2}

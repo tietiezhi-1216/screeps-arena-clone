@@ -1,10 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- 原创图标：受 Screeps Arena 启发（深色底 + 竞技场圆环 + 两个对峙的 creep），非官方素材 -->
-  <rect width="512" height="512" rx="96" fill="#1b1d22"/>
-  <circle cx="256" cy="256" r="190" fill="#23262d" stroke="#ffd34e" stroke-width="22"/>
-  <circle cx="256" cy="256" r="150" fill="none" stroke="#ffd34e" stroke-opacity=".25" stroke-width="6" stroke-dasharray="18 14"/>
-  <path d="M256 66 V446 M66 256 H446" stroke="#ffd34e" stroke-opacity=".18" stroke-width="6"/>
-  <g transform="translate(176 256)"><circle r="58" fill="none" stroke="#5ec8ff" stroke-width="16" stroke-dasharray="76 15"/><circle r="36" fill="#5ec8ff"/></g>
-  <g transform="translate(336 256)"><circle r="58" fill="none" stroke="#ff6f6f" stroke-width="16" stroke-dasharray="76 15"/><circle r="36" fill="#ff6f6f"/></g>
-  <path d="M236 228 L276 284 M276 228 L236 284" stroke="#ffd34e" stroke-width="14" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Screeps Arena 图标：与 Screeps World 同系列（蓝灰底 + creep 几何标记），Arena 主色红 #E5484D。原创，不使用 Screeps 商标图形 -->
+  <rect width="1024" height="1024" fill="#1c2533"/>
+  <g fill="none" stroke-linecap="butt">
+    <circle cx="512" cy="512" r="300" stroke="#26324a" stroke-width="56"/>
+    <path d="M 251.2 360 A 300 300 0 0 1 772.8 360" stroke="#E5484D" stroke-width="56"/>
+    <path d="M 724.1 724.1 A 300 300 0 0 1 299.9 724.1" stroke="#8d8d92" stroke-width="56"/>
+  </g>
+  <circle cx="512" cy="512" r="150" fill="#f2f2f2"/>
+  <rect x="452" y="452" width="120" height="120" rx="14" fill="#1c2533" transform="rotate(45 512 512)"/>
 </svg>

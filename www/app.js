@@ -157,7 +157,7 @@ function draw(k = 1) {
   g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#141b26'; g.fillRect(0, 0, cv.width, cv.height);
   if (!replay) return; const f = replay.frames[frame];
   g.setTransform(dpr * view.s, 0, 0, dpr * view.s, dpr * view.x, dpr * view.y);
-  drawFrame(g, terr, f, replay.frames[frame - 1], k, sel);
+  drawFrame(g, terr, f, replay.frames[frame - 1], k, sel, Math.max(1, Math.min(3, 1.5 / view.s)));
   $('#tick').textContent = f.tick - 1; $('#energy').textContent = f.objs.filter(o => o.o === 'p1' && (o.t === 'StructureSpawn' || o.t === 'StructureExtension')).reduce((a, o) => a + (o.e || 0), 0); runSt(); $('#scrub').value = frame; $('#s1').textContent = scoreOf(f, 'p1'); $('#s2').textContent = scoreOf(f, 'p2');
   inspect(f);
   if (f.result && frame === replay.frames.length - 1 && !live) showResult(f.result);
