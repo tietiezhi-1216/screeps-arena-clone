@@ -122,3 +122,15 @@ input:focus{border-color:var(--acc)}
 #edTools{right:16px}
 @media (orientation:landscape){.side .btn,.side .btn.primary{flex:0 0 auto;height:44px}}
 .injectionDiv,.injectionDiv:focus,.blocklyWorkspace,.blocklySvg{outline:none!important;border:0!important}
+
+/* v0.9.1 模式卡：正方形地图封面完整显示 */
+.mc{display:flex;align-items:stretch;aspect-ratio:auto!important;height:auto;background:var(--panel)!important}
+.mc .im{flex:0 0 auto;width:132px;aspect-ratio:1;background:#111 center/cover no-repeat;border-right:1px solid var(--line)}
+.mc .cap{position:static;flex:1;min-width:0;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;background:none;border:0;padding:12px 14px}
+.mc .md{text-align:left;flex:0 0 auto;max-width:100%}
+.mc .badge{position:static;margin-top:4px}
+@media (orientation:landscape){
+ .mc{flex-direction:column}.mc .im{width:100%;height:auto;border-right:0;border-bottom:1px solid var(--line)}
+ #modes .mcards{max-width:none;grid-template-columns:repeat(3,minmax(0,250px));justify-content:center;padding-top:12px}
+ .mc .cap{flex-direction:row;align-items:center;padding:8px 10px}.mc .badge{margin:0 0 0 auto}
+}

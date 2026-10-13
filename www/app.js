@@ -94,8 +94,8 @@ const seg = (id, cb) => { const el = $(id); const set = v => { $$(id + ' button'
 const setLevel = seg('#level', v => { state.level = +v; localStorage[KS.level] = v; });
 setLevel(state.level);
 function renderModes() { const s = curScript(); $('#mcards').innerHTML = '';
-  for (const m of MODES) { const b = document.createElement('button'); b.className = 'mc'; b.style.backgroundImage = `url(${m.cover})`;
-    b.innerHTML = `${s?.mode === m.id ? '<span class="badge">脚本适用</span>' : ''}<div class="cap"><span class="mt">${m.name}</span><span class="md">${m.d}</span></div>`;
+  for (const m of MODES) { const b = document.createElement('button'); b.className = 'mc';
+    b.innerHTML = `<span class="im" style="background-image:url(${m.cover})"></span><div class="cap"><span class="mt">${m.name}</span><span class="md">${m.d}</span>${s?.mode === m.id ? '<span class="badge">脚本适用</span>' : ''}</div>`;
     b.onclick = () => { state.mode = m.id; $('#setupTitle').textContent = arenaName(m.id, state.level); $('#banner').style.backgroundImage = `url(${m.cover})`; go('setup'); }; $('#mcards').append(b); } }
 renderModes();
 $$('#aiList .row').forEach(b => b.onclick = () => { state.vs = 'ai'; state.diff = b.dataset.diff; startAi(); });
@@ -157,7 +157,7 @@ function draw(k = 1) {
   g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#141b26'; g.fillRect(0, 0, cv.width, cv.height);
   if (!replay) return; const f = replay.frames[frame];
   g.setTransform(dpr * view.s, 0, 0, dpr * view.s, dpr * view.x, dpr * view.y);
-  drawFrame(g, terr, f, replay.frames[frame - 1], k, sel, Math.max(1, Math.min(3, 1.5 / view.s)));
+  drawFrame(g, terr, f, replay.frames[frame - 1], k, sel, 1);
   $('#tick').textContent = f.tick - 1; $('#energy').textContent = f.objs.filter(o => o.o === 'p1' && (o.t === 'StructureSpawn' || o.t === 'StructureExtension')).reduce((a, o) => a + (o.e || 0), 0); runSt(); $('#scrub').value = frame; $('#s1').textContent = scoreOf(f, 'p1'); $('#s2').textContent = scoreOf(f, 'p2');
   inspect(f);
   if (f.result && frame === replay.frames.length - 1 && !live) showResult(f.result);
@@ -254,3 +254,4 @@ $('#goReplays').onclick = async () => { go('replays'); const all = ((await tx('r
   $('#rlist').innerHTML = all.length ? '' : '<div class="empty">还没有回放</div>';
   for (const r of all) { const b = document.createElement('button'); b.className = 'item'; const w = r.result?.winner; b.innerHTML = `<div class="it"><div class="in">${name(r.mode)}</div><div class="is"><span class="tag">${!w ? '平局' : w === 'p1' ? '胜' : '负'}</span>${esc(r.script || '')} ${dt(r.id)}</div></div>`;
     b.onclick = () => { state.vs = 'replay'; go('match'); $('#busy').classList.add('hidden'); setReplay(r.data); }; $('#rlist').append(b); } };
+window.__sa = { spawnAt: () => { const o = replay?.frames[frame].objs.find(o => o.t === 'StructureSpawn' && o.o === 'p1'); return o && { x: view.x + (o.x + .5) * TS * view.s, y: view.y + (o.y + .5) * TS * view.s }; } }; // 截图/调试用

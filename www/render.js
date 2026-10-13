@@ -32,11 +32,20 @@ export function terrainCanvas(terrain) {
   };
   const isS = (x, y) => T(x, y) === 2;
   blob(isS, '#292b18', .35, 0);
-  g.strokeStyle = '#3a3e1d'; g.lineWidth = 1.5; g.beginPath();
+  // 沼泽描边：连续实线，沿融合轮廓（直边 + 凸角圆弧），不再是分段虚线
+  g.strokeStyle = '#3a3e1d'; g.lineWidth = 1.5; g.beginPath(); const R = .35 * TT, w = .75;
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (isS(x, y)) {
-    const X = x * TT, Y = y * TT, m = 5;
-    if (!isS(x, y - 1)) { g.moveTo(X + m, Y + .75); g.lineTo(X + TT - m, Y + .75); } if (!isS(x, y + 1)) { g.moveTo(X + m, Y + TT - .75); g.lineTo(X + TT - m, Y + TT - .75); }
-    if (!isS(x - 1, y)) { g.moveTo(X + .75, Y + m); g.lineTo(X + .75, Y + TT - m); } if (!isS(x + 1, y)) { g.moveTo(X + TT - .75, Y + m); g.lineTo(X + TT - .75, Y + TT - m); }
+    const X = x * TT, Y = y * TT, cv = (sx, sy) => !isS(x + sx, y) && !isS(x, y + sy); // 凸角
+    const r = (sx, sy) => cv(sx, sy) ? R : 0;
+    if (!isS(x, y - 1)) { g.moveTo(X + r(-1, -1), Y + w); g.lineTo(X + TT - r(1, -1), Y + w); }
+    if (!isS(x, y + 1)) { g.moveTo(X + r(-1, 1), Y + TT - w); g.lineTo(X + TT - r(1, 1), Y + TT - w); }
+    if (!isS(x - 1, y)) { g.moveTo(X + w, Y + r(-1, -1)); g.lineTo(X + w, Y + TT - r(-1, 1)); }
+    if (!isS(x + 1, y)) { g.moveTo(X + TT - w, Y + r(1, -1)); g.lineTo(X + TT - w, Y + TT - r(1, 1)); }
+    for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) if (cv(sx, sy)) {
+      const ccx = X + TT / 2 + sx * (TT / 2 - R), ccy = Y + TT / 2 + sy * (TT / 2 - R), rr = R - w;
+      const a0 = sx < 0 ? Math.PI : 0, a1 = sy < 0 ? -Math.PI / 2 : Math.PI / 2;
+      g.moveTo(ccx + Math.cos(a0) * rr, ccy + Math.sin(a0) * rr); g.arc(ccx, ccy, rr, a0, a1, (sx < 0) === (sy < 0) ? false : true);
+    }
   }
   g.stroke();
   blob((x, y) => T(x, y) === 1, '#111111', .45, .3);
