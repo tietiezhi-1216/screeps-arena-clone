@@ -37,23 +37,25 @@ const stack = ['home'];
 function go(id, push = true) { $$('.screen').forEach(s => s.classList.toggle('on', s.id === id)); if (push && stack.at(-1) !== id) stack.push(id); if (id === 'match') resize(); if (id === 'editor') setTimeout(() => blocks?.resize(), 0); if (id === 'home') renderHome(); if (id === 'scripts') renderLib(); }
 function back() { if ($('#sheet:not(.hidden),#dlg:not(.hidden)')) return closeDlg(); if (stack.length > 1) stack.pop(); const id = stack.at(-1); if (['lobby', 'setup', 'modes', 'home'].includes(id)) stopLive(); go(id, false); }
 $$('[data-back]').forEach(b => b.onclick = back);
-// 安卓返回键：先关最上层（更新弹窗 → 身体部件面板等动态弹窗 → 对话框/底部菜单 → Blockly 下拉/积木抽屉），再逐级返回上一页；首页按两次（2 秒内）才退出
-let exitArm = 0;
 function toast(t) { let el = $('#toast'); if (!el) { el = document.createElement('div'); el.id = 'toast'; document.body.appendChild(el); } el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 1800); }
-function hardwareBack() {
-  const uu = document.querySelector('.uu:not(.hidden)'); if (uu) { uu.querySelector('.uuLater')?.click(); return 'update'; }
-  const dyn = [...document.querySelectorAll('body > .dlg:not(#dlg):not(#sheet)')].pop(); if (dyn) { dyn.querySelector('[data-a="no"]')?.click(); if (dyn.isConnected) dyn.remove(); return 'panel'; }
-  if ($('#sheet:not(.hidden),#dlg:not(.hidden)')) { closeDlg(); return 'dialog'; }
-  if (window.Blockly) { if (Blockly.WidgetDiv?.isVisible?.()) { Blockly.WidgetDiv.hide(); return 'widget'; } if (Blockly.DropDownDiv?.isVisible?.()) { Blockly.DropDownDiv.hideIfOwner ? Blockly.DropDownDiv.hide() : Blockly.DropDownDiv.hide(); return 'widget'; } }
-  if (stack.at(-1) === 'editor' && blocks?.flyOpen?.()) { blocks.closeCat(); return 'flyout'; }
-  if (!$('#result').classList.contains('hidden')) { $('#resBack').click(); return 'page'; }
-  if (stack.length > 1) { if (stack.at(-1) === 'match') playing = false; back(); return 'page'; }
-  if (Date.now() - exitArm < 2000) { (CapApp?.exitApp ? CapApp.exitApp() : window.__exitHook?.()); return 'exit'; }
-  exitArm = Date.now(); toast('再按一次退出'); return 'toast';
-}
-window.hardwareBack = hardwareBack;
+// 系列共用 back-stack.js（与 World 相同）：按优先级逐层关闭，再逐级回上一页；首页 2 秒内按两次才退出
 const CapApp = window.Capacitor?.isNativePlatform?.() ? (window.Capacitor.Plugins?.App || window.Capacitor.registerPlugin?.('App')) : null;
-CapApp?.addListener?.('backButton', () => hardwareBack());
+(function initBack() {
+  const BS = window.BackStack, L = (n, p, o, c) => BS.layer(n, p, o, c);
+  L('update', 100, () => !!document.querySelector('.uu:not(.hidden)'), () => document.querySelector('.uu:not(.hidden) .uuLater')?.click());
+  L('panel', 95, () => !!document.querySelector('body > .dlg:not(#dlg):not(#sheet)'), () => { const d = [...document.querySelectorAll('body > .dlg:not(#dlg):not(#sheet)')].pop(); d.querySelector('[data-a="no"]')?.click(); if (d.isConnected) d.remove(); });
+  L('dialog', 90, () => !!$('#sheet:not(.hidden),#dlg:not(.hidden)'), () => closeDlg());
+  L('dropdown', 85, () => !!(window.Blockly && (Blockly.WidgetDiv?.isVisible?.() || Blockly.DropDownDiv?.isVisible?.())), () => { Blockly.WidgetDiv?.hide?.(); Blockly.DropDownDiv?.hideWithoutAnimation?.(); });
+  L('flyout', 80, () => stack.at(-1) === 'editor' && !!blocks?.flyOpen?.(), () => blocks.closeCat());
+  L('result', 70, () => stack.at(-1) === 'match' && !$('#result').classList.contains('hidden'), () => $('#resBack').click());
+  BS.init({
+    isRoot: () => stack.length <= 1,
+    toBack: () => { if (stack.at(-1) === 'match') playing = false; back(); },
+    toast: m => toast(m),
+    exit: () => { if (CapApp?.exitApp) CapApp.exitApp(); else window.__exitHook?.(); },
+  });
+})();
+window.hardwareBack = () => BackStack.handle();
 
 // ---------- 对话框 ----------
 let dlgOk = null;
@@ -119,7 +121,7 @@ $('#goLan').onclick = () => { state.vs = 'lan'; go('lobby'); scan(); };
 const modeId = () => `${state.mode}${state.level === 2 ? '-advanced' : ''}`;
 
 // ---------- 积木编辑器 ----------
-function openEditor() { const s = curScript(); if (!s) return; $('#edName').textContent = s.name; go('editor'); if (blocks) blocks.load(s.ws); else initBlocks(); refreshCode(); setTimeout(() => { blocks?.resize(); if (blocks?.count()) blocks.center(); }, 30); }
+function openEditor() { const s = curScript(); if (!s) return; go('editor'); if (blocks) blocks.load(s.ws); else initBlocks(); refreshCode(); setTimeout(() => { blocks?.resize(); if (blocks?.count()) blocks.center(); }, 30); }
 function refreshCode() { code = blocks?.code?.() || ''; $('#edEmpty').classList.toggle('hidden', !!blocks && blocks.count() > 0); }
 function initBlocks() {
   if (!window.ArenaBlocks) return;
@@ -129,9 +131,9 @@ function initBlocks() {
 }
 // 加载出战脚本的代码（不进入编辑器也能出战）
 function loadCode() { const s = curScript(); if (!s) { code = ''; return; } if (!blocks) initBlocks(); blocks?.load(s.ws); code = blocks?.code?.() || ''; }
-$('#edDone').onclick = $('#edBack').onclick = () => { if (blocks?.isOpen()) return blocks.closeCat(); back(); };
+$('#edDone').onclick = () => { if (blocks?.isOpen()) return blocks.closeCat(); back(); };
 $('#edUndo').onclick = () => blocks.undo(false); $('#edRedo').onclick = () => blocks.undo(true);
-$('#edZin').onclick = () => blocks.zoom(1); $('#edZout').onclick = () => blocks.zoom(-1); $('#edTrash').onclick = () => blocks.deleteSelected();
+$('#edZin').onclick = () => blocks.zoom(1); $('#edZout').onclick = () => blocks.zoom(-1); $('#edCenter').onclick = () => blocks.center(); $('#edTrash').onclick = () => blocks.deleteSelected();
 const myCode = () => code || 'export function loop() {}\n';
 const checkCode = () => { try { transformModule(myCode()); return null; } catch (e) { return e.message; } };
 

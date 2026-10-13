@@ -60,10 +60,9 @@
 </section>
 
 <section id="editor" class="screen">
- <header class="edbar"><button class="hb" id="edBack" data-icon="arrow-left"></button><div id="edName"></div><button id="edDone" class="btn primary sm" data-icon="check"><span class="lb">完成</span></button></header>
- <div id="blocklyDiv"><div id="edTools"><button id="edUndo" data-icon="arrow-back-up"></button><button id="edRedo" data-icon="arrow-forward-up"></button><button id="edZin" data-icon="zoom-in"></button><button id="edZout" data-icon="zoom-out"></button><button id="edTrash" data-icon="trash"></button></div>
-  <div id="edEmpty">点下方分类，拖出积木开始</div></div>
- <div id="cats"></div>
+ <div id="blocklyDiv"><div id="edTools"><button id="edUndo" data-icon="arrow-back-up"></button><button id="edRedo" data-icon="arrow-forward-up"></button><button id="edZin" data-icon="zoom-in"></button><button id="edZout" data-icon="zoom-out"></button><button id="edCenter" data-icon="focus-centered"></button><button id="edTrash" data-icon="trash"></button></div>
+  <div id="edEmpty">点下方分类添加积木</div></div>
+ <div id="edTabs"><div id="cats"></div><button id="edDone" class="btn primary sm" data-icon="check"><span class="lb">完成</span></button></div>
 </section>
 
 <section id="match" class="screen">
@@ -83,5 +82,5 @@
 <div id="dlg" class="dlg hidden"><div class="box"><div class="dt" id="dlgT"></div><div id="dlgB"></div><div class="row2"><button id="dlgNo" class="btn">取消</button><button id="dlgOk" class="btn primary">确定</button></div></div></div>
 <div id="sheet" class="dlg hidden"><div class="box" id="sheetB"></div></div>
 
-<script src="version.js"></script><script src="icons.js"></script><script src="icons-extra.js"></script><script src="vendor/blockly_compressed.js"></script><script src="vendor/blocks_compressed.js"></script><script src="vendor/javascript_compressed.js"></script><script src="vendor/msg-zh.js"></script><script src="blocks.js"></script><script src="vendor/capacitor.js"></script><script src="update-ui.js"></script><script src="update.js"></script>
+<script src="version.js"></script><script src="icons.js"></script><script src="icons-extra.js"></script><script src="vendor/blockly_compressed.js"></script><script src="vendor/blocks_compressed.js"></script><script src="vendor/javascript_compressed.js"></script><script src="vendor/msg-zh.js"></script><script src="blocks.js"></script><script src="vendor/capacitor.js"></script><script src="back-stack.js"></script><script src="update-ui.js"></script><script src="update.js"></script>
 <script type="module" src="app.js"></script></body></html>

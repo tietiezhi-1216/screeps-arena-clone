@@ -20,6 +20,8 @@ test('back button: layers first, then page by page, double-press exit on home', 
     const scr = () => pg.evaluate(() => document.querySelector('.screen.on').id);
     const click = async s => { await pg.evaluate(s => document.querySelector(s).click(), s); await wait(300); };
     assert.equal(await pg.evaluate(() => typeof window.hardwareBack), 'function', '已注册 backButton');
+    assert.ok(await pg.evaluate(() => window.BackStack && BackStack._layers.length >= 6), '使用系列共用 back-stack.js');
+    assert.equal(await pg.evaluate(() => /hardwareBack\(\)\s*\{/.test(document.documentElement.outerHTML)), false);
     await click('#goScripts'); assert.equal(await scr(), 'scripts');
     await click('#newScript'); assert.ok(await pg.$('#dlg:not(.hidden)'));
     await back(); assert.equal(await pg.$('#dlg:not(.hidden)'), null, '返回先关对话框'); assert.equal(await scr(), 'scripts');
@@ -38,6 +40,11 @@ test('back button: layers first, then page by page, double-press exit on home', 
     await back(); assert.equal(await pg.evaluate(() => window.__exit), 0, '首页第一次不退出');
     assert.equal(await pg.$eval('#toast', e => e.textContent), '再按一次退出');
     await back(); assert.equal(await pg.evaluate(() => window.__exit), 1, '2 秒内第二次退出');
+    // 超过 2 秒的两次返回不退出
+    await pg.evaluate(() => { let t = 1e9; BackStack._now = () => t; window.__adv = ms => { t += ms; }; });
+    await back(); await pg.evaluate(() => window.__adv(2500)); await back();
+    assert.equal(await pg.evaluate(() => window.__exit), 1, '间隔超过 2 秒不退出');
+    await pg.evaluate(() => { BackStack._now = null; });
     assert.deepEqual(errs, []);
   } finally { await b.close(); srv.close(); }
 });

@@ -257,7 +257,7 @@ window.ArenaBlocks = {
   CATS, toCode, Roles,
   create(div, saved, onChange) {
     const ws = Blockly.inject(div, { toolbox: { kind: 'flyoutToolbox', contents: [] }, trashcan: false, renderer: 'zelos', theme: THEME,
-      zoom: { controls: false, wheel: true, pinch: true, startScale: 0.8, minScale: 0.4, maxScale: 2 }, move: { scrollbars: false, drag: true, wheel: true },
+      zoom: { controls: false, wheel: true, pinch: true, startScale: 0.8, minScale: 0.4, maxScale: 2 }, move: { scrollbars: true, drag: true, wheel: true },
       grid: { spacing: 24, length: 2, colour: '#2c3748', snap: true } });
     Roles.list = [];
     if (saved) { try { Blockly.serialization.workspaces.load(saved, ws); } catch (e) { ws.clear(); } } // 默认空白工作区（无内置程序）
