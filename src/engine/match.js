@@ -4,14 +4,15 @@ import { createMatch as captureTheFlag } from '../modes/captureTheFlag.js';
 export const MODES = { 'spawn-and-swamp': spawnAndSwamp, 'spawn-and-swamp-advanced': spawnAndSwampAdvanced, 'capture-the-flag': captureTheFlag };
 export const MODE_NAMES = { 'spawn-and-swamp': 'Spawn and Swamp（基础）', 'spawn-and-swamp-advanced': 'Spawn and Swamp（高级）', 'capture-the-flag': 'Capture the Flag（基础）' };
 // 逐 tick 推进的对局（联机房主/实时观战用）
-export function createLiveMatch({ mode = 'spawn-and-swamp', seed = 1, scripts, compile, hardRun, onCompiled } = {}) {
+export function createLiveMatch({ mode = 'spawn-and-swamp', seed = 1, scripts, compile, hardRun, onCompiled, cpuMode = 'budget' } = {}) {
   const players = ['p1', 'p2'];
   const world = MODES[mode]({ seed, players });
-  const rts = players.map((p, i) => new PlayerRuntime(world, p, scripts[i], { compile, hardRun }));
+  world.cpuMode = cpuMode;
+  const rts = players.map((p, i) => new PlayerRuntime(world, p, scripts[i], { compile, hardRun, cpuMode }));
   onCompiled?.();
   const meta = () => ({ mode, seed, players, arena: world.arena, result: world.result, ticks: world.tick - 1 });
   return { world, meta, terrain: Array.from(world.terrain), first: world.snapshot(), get done() { return !!world.result; },
-    setCode(i, src) { rts[i] = new PlayerRuntime(world, players[i], src, { compile, hardRun }); },
+    setCode(i, src) { rts[i] = new PlayerRuntime(world, players[i], src, { compile, hardRun, cpuMode }); },
     step() { for (const rt of rts) rt.run(); world.step(); return world.snapshot(); } };
 }
 // 运行整局，返回回放：{ meta, terrain, frames[] }

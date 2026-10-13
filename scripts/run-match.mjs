@@ -9,8 +9,7 @@ const [a = 'bots/rush.mjs', b = 'bots/kite.mjs'] = args;
 import { SHADOWED, LOCKDOWN_SRC } from '../src/engine/sandbox.js';
 const ctx = vm.createContext({});
 const compile = code => vm.runInContext(`(function(__require, console, __chk, ${SHADOWED.join(', ')}){${code}\n})`, ctx, { timeout: 1000 });
-const hardRun = (loop, ms) => { ctx.__loop = loop; try { vm.runInContext('__loop()', ctx, { timeout: Math.max(1, Math.ceil(ms * 2)) }); } finally { delete ctx.__loop; } };
 const t0 = Date.now();
-const r = runMatch({ onCompiled: () => vm.runInContext(LOCKDOWN_SRC, ctx), seed, scripts: [fs.readFileSync(a, 'utf8'), fs.readFileSync(b, 'utf8')], compile, hardRun });
+const r = runMatch({ onCompiled: () => vm.runInContext(LOCKDOWN_SRC, ctx), seed, scripts: [fs.readFileSync(a, 'utf8'), fs.readFileSync(b, 'utf8')], compile, cpuMode: 'budget' });
 console.log(`${a} vs ${b} seed=${seed}: ${JSON.stringify(r.meta.result)} after ${r.meta.ticks} ticks (${Date.now() - t0} ms)`);
 if (out) { delete r.world; fs.writeFileSync(out, JSON.stringify(r)); console.log('replay ->', out); }

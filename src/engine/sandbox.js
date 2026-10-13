@@ -89,30 +89,57 @@ export function modulesFor(world, pid) {
 export function defaultCompile(code) { return new Function('__require', 'console', '__chk', ...SHADOWED, code); }
 
 export class PlayerRuntime {
-  constructor(world, pid, source, { compile = defaultCompile, hardRun } = {}) {
-    this.world = world; this.pid = pid; this.error = null; this.logs = []; this.cpu = { used: 0, limit: 0, start: 0, tripped: false }; this.ticks = 0; this.hardRun = hardRun;
+  constructor(world, pid, source, { compile = defaultCompile, hardRun, cpuMode } = {}) {
+    this.world = world; this.pid = pid; this.error = null; this.logs = [];
+    this.cpu = { used: 0, limit: 0, start: 0, tripped: false, ops: 0 };
+    this.ticks = 0; this.hardRun = hardRun;
+    this.cpuMode = cpuMode || world.cpuMode || 'wall';
     const mods = modulesFor(world, pid);
     const require = m => { if (/^arena(\/|$)/.test(m)) return mods.arena; if (!(m in mods)) throw new Error(`Cannot find module '${m}'`); return mods[m]; };
     const console = { log: (...a) => { if (this.logs.length < 200) this.logs.push(a.map(x => typeof x === 'string' ? x : safeJson(x)).join(' ').slice(0, 1000)); } };
     console.error = console.warn = console.info = console.debug = console.log;
-    const cpu = this.cpu; this._chk = () => { if (cpu.tripped || now() - cpu.start > cpu.limit) { cpu.tripped = true; throw new CpuLimitError(); } };
-    this.cpu.limit = world.arena.cpuTimeLimitFirstTick; this.cpu.start = now();
+    const cpu = this.cpu, mode = this.cpuMode;
+    this._chk = () => {
+      cpu.ops++;
+      if (cpu.tripped) throw new CpuLimitError();
+      if (mode === 'budget') { if (cpu.ops > cpu.limit) { cpu.tripped = true; throw new CpuLimitError(); } }
+      else if (now() - cpu.start > cpu.limit) { cpu.tripped = true; throw new CpuLimitError(); }
+    };
+    this.cpu.limit = this._quota(world.arena.cpuTimeLimitFirstTick); this.cpu.start = now(); this.cpu.ops = 0;
     try { this.exports = compile(transformModule(source))(require, console, this._chk, ...SHADOWED.map(() => undefined)); if (typeof this.exports.loop !== 'function') throw new Error('loop() is not exported'); }
     catch (e) { this.error = String(e && e.stack || e).split('\n').slice(0, 3).join('\n'); this.exports = { loop() {} }; }
-    world.utilsCpu = world.utilsCpu || {};
+  }
+  _quota(ms) { return this.cpuMode === 'budget' ? Math.max(1, Math.floor(ms * 1000)) : ms; }
+  _discardIntents() {
+    const w = this.world, pid = this.pid;
+    for (const [id, m] of [...w.intents.entries()]) {
+      const o = w.objects.get(id);
+      if (o && o._owner === pid) w.intents.delete(id);
+      else if (m.spawn && m.spawn.creep && m.spawn.creep._owner === pid) w.intents.delete(id);
+    }
   }
   run() {
     const w = this.world; w.current = this.pid; this.logs = []; const vis = [];
     Visual._sink = v => vis.push(v);
-    const cpu = this.cpu; cpu.limit = this.ticks++ === 0 ? w.arena.cpuTimeLimitFirstTick : w.arena.cpuTimeLimit; cpu.tripped = false; cpu.start = now(); w._cpuStartMs = cpu.start;
-    try { this.hardRun ? this.hardRun(this.exports.loop, cpu.limit) : this.exports.loop(); }
-    catch (e) { if (cpu.tripped || /timed out/i.test(String(e))) { cpu.tripped = true; this.logs.push(`[cpu] Script execution timed out (> ${cpu.limit} ms), tick aborted`); }
-      else this.logs.push('[error] ' + (e && e.stack || e).toString().split('\n').slice(0, 3).join('\n')); }
-    cpu.used = now() - cpu.start;
-    if (cpu.tripped) for (const o of w.all()) if (o._owner === this.pid) w.intents.delete(o.id); // 超时：本 tick 指令全部作废
+    const cpu = this.cpu; const ms = this.ticks++ === 0 ? w.arena.cpuTimeLimitFirstTick : w.arena.cpuTimeLimit;
+    cpu.limit = this._quota(ms); cpu.tripped = false; cpu.start = now(); cpu.ops = 0; w._cpuStartMs = cpu.start;
+    try {
+      if (this.hardRun && this.cpuMode === 'wall') this.hardRun(this.exports.loop, ms);
+      else this.exports.loop();
+    } catch (e) {
+      if (cpu.tripped || /timed out/i.test(String(e))) {
+        cpu.tripped = true;
+        this.logs.push(this.cpuMode === 'budget'
+          ? `[cpu] Script execution timed out (> ${ms} ms budget = ${cpu.limit} checkpoints), tick aborted`
+          : `[cpu] Script execution timed out (> ${ms} ms), tick aborted`);
+      } else this.logs.push('[error] ' + (e && e.stack || e).toString().split('\n').slice(0, 3).join('\n'));
+    }
+    cpu.used = this.cpuMode === 'budget' ? cpu.ops / 1000 : now() - cpu.start;
+    if (cpu.tripped) this._discardIntents();
     Visual._sink = null; w.current = null;
     if (this.error) this.logs.unshift('[compile error] ' + this.error);
-    w.logs[this.pid] = this.logs; w.visuals[this.pid] = vis.flatMap(v => v._items); w.cpu = { ...(w.cpu || {}), [this.pid]: Math.round(cpu.used * 1000) / 1000 };
+    w.logs[this.pid] = this.logs; w.visuals[this.pid] = vis.flatMap(v => v._items);
+    w.cpu = { ...(w.cpu || {}), [this.pid]: Math.round(cpu.used * 1000) / 1000 };
   }
 }
 function safeJson(x) { try { return JSON.stringify(x, (k, v) => k === '_w' ? undefined : v); } catch { return String(x); } }

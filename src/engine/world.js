@@ -81,9 +81,16 @@ export class World {
   }
   _healCreep(c, amt) { for (let i = c.body.length - 1; i >= 0 && amt > 0; i--) { const p = c.body[i]; const d = Math.min(C.BODYPART_HITS - p.hits, amt); p.hits += d; amt -= d; } c.hits = c.body.reduce((a, p) => a + p.hits, 0); }
 
+  _movePrio(c, x, y) {
+    let h = (this.seed | 0) ^ Math.imul(x + 1, 0x85ebca6b) ^ Math.imul(y + 1, 0xc2b2ae35);
+    const id = String(c.id);
+    for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 0x27d4eb2d);
+    return h >>> 0;
+  }
   step() {
     if (this.result) return; this.events = []; this._dmg = new Map(); const heal = new Map(), get = id => this.objects.get(id);
-    const I = [...this.intents.entries()].map(([id, m]) => [get(id), m]).filter(([o]) => o);
+    const I = [...this.intents.entries()].map(([id, m]) => [get(id), m]).filter(([o]) => o)
+      .sort((a, b) => (a[0].id < b[0].id ? -1 : a[0].id > b[0].id ? 1 : 0));
     // 1 战斗
     for (const [o, m] of I) {
       if (m.attack) { const t = get(m.attack.target); if (t && range(o, t) <= 1) { o._k = 'melee'; this._damage(this._redirect(t, o._owner), o._parts(C.ATTACK) * C.ATTACK_POWER, o); } }
@@ -111,6 +118,16 @@ export class World {
       if (m.transfer) { const t = get(m.transfer.target); if (t) { const r = m.transfer.r, n = Math.min(m.transfer.amt, o.store[r] || 0, Math.max(0, t.store.getFreeCapacity(r))); o.store[r] -= n; t.store[r] = (t.store[r] || 0) + n; } }
       if (m.pickup) { const t = get(m.pickup.target); if (t && t.exists) { const n = Math.min(t.amount, o.store.getFreeCapacity()); t.amount -= n; o.store[t.resourceType] = (o.store[t.resourceType] || 0) + n; if (t.amount <= 0) this.remove(t); } }
       if (m.drop) { const n = Math.min(m.drop.amt, o.store.energy || 0); o.store.energy -= n; this._drop(o, n); }
+    }
+    // 2b 生产 intent
+    for (const [o, m] of I) {
+      if (!m.spawn || !(o instanceof P.StructureSpawn) || !o.exists || o.spawning) continue;
+      const { cost, creep, body } = m.spawn;
+      const pool = [o, ...this.all(P.StructureExtension).filter(e => e._owner === o._owner && range(e, o) <= C.SPAWN_RANGE)];
+      if (pool.reduce((a, s) => a + (s.store.energy || 0), 0) < cost) continue;
+      let left = cost; for (const s of pool) { const t = Math.min(left, s.store.energy || 0); s.store.energy -= t; left -= t; if (!left) break; }
+      this.add(creep); creep.spawning = true; creep.x = o.x; creep.y = o.y;
+      o.spawning = new P.Spawning(o, creep, body.length * C.CREEP_SPAWN_TIME);
     }
     // 3 移动（含 pull）
     this._moves(I);
@@ -152,7 +169,6 @@ export class World {
       if (m.pull) pulls.set(this.objects.get(m.pull.target), o);
       if (m.move) want.set(o, { x: o.x + DIRS[m.move.dir][0], y: o.y + DIRS[m.move.dir][1] });
     }
-    // 被拉的 creep 无需 MOVE/疲劳：只要它朝拉它的 creep 移动
     for (const [c, d] of want) {
       const puller = pulls.get(c); const pulled = puller && want.has(puller) && d.x === puller.x && d.y === puller.y;
       if (c.fatigue > 0 && !pulled) want.delete(c); else d.pulledBy = pulled ? puller : null;
@@ -160,18 +176,28 @@ export class World {
     let changed = true;
     while (changed) {
       changed = false; const dest = new Map();
-      for (const [c, d] of want) {
+      const order = [...want.entries()].sort((a, b) => {
+        const pa = this._movePrio(a[0], a[1].x, a[1].y), pb = this._movePrio(b[0], b[1].x, b[1].y);
+        return pa < pb ? -1 : pa > pb ? 1 : (a[0].id < b[0].id ? -1 : 1);
+      });
+      for (const [c, d] of order) {
+        if (!want.has(c)) continue;
         const k = d.x + ',' + d.y;
         let ok = this.terrainAt(d.x, d.y) !== C.TERRAIN_WALL || this.at(d.x, d.y).some(o => o instanceof P.StructureRoad);
         if (ok) for (const o of this.at(d.x, d.y)) {
           if (o instanceof P.Creep) { if (o.spawning) continue; if (!want.has(o)) { ok = false; break; } }
           else if (isObstacle(o) || (o instanceof P.StructureRampart && o._owner !== c._owner)) { ok = false; break; }
         }
-        if (ok && dest.has(k)) ok = false; // 同格冲突：先到先得（按 intent 顺序，确定性）
-        if (!ok) { want.delete(c); changed = true; break; } dest.set(k, c);
+        if (ok && dest.has(k)) ok = false;
+        if (!ok) { want.delete(c); changed = true; continue; }
+        dest.set(k, c);
       }
     }
-    for (const [c, d] of want) {
+    const applied = [...want.entries()].sort((a, b) => {
+      const pa = this._movePrio(a[0], a[1].x, a[1].y), pb = this._movePrio(b[0], b[1].x, b[1].y);
+      return pa < pb ? -1 : pa > pb ? 1 : (a[0].id < b[0].id ? -1 : 1);
+    });
+    for (const [c, d] of applied) {
       const cost = this._moveCost(c, d.x, d.y); c.x = d.x; c.y = d.y;
       if (d.pulledBy) d.pulledBy.fatigue += cost; else c.fatigue += cost;
       const road = this.at(c.x, c.y).find(o => o instanceof P.StructureRoad); if (road) { road.hits -= C.ROAD_WEAROUT * c.body.length; }

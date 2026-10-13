@@ -10,10 +10,10 @@ self.onmessage = e => {
   try {
     if (!live) {
       let n = 0;
-      const r = runMatch({ scripts, seed, mode, onCompiled: lockdown, onFrame: f => { if (++n % 50 === 0) post({ progress: f.tick }); } });
+      const r = runMatch({ scripts, seed, mode, cpuMode: 'wall', onCompiled: lockdown, onFrame: f => { if (++n % 50 === 0) post({ progress: f.tick }); } });
       delete r.world; post({ replay: r }); return;
     }
-    const m = createLiveMatch({ scripts, seed, mode, onCompiled: lockdown });
+    const m = createLiveMatch({ scripts, seed, mode, cpuMode: 'wall', onCompiled: lockdown });
     post({ start: { meta: m.meta(), terrain: m.terrain, first: m.first } });
     const loop = () => { const t0 = Date.now(); const f = m.step(); post({ frame: f });
       if (m.done) post({ end: m.meta() }); else timer(loop, Math.max(0, cur.dt - (Date.now() - t0))); };

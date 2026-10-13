@@ -12,11 +12,17 @@ test('official constants (docs values)', () => {
   assert.equal(C.BODYPART_COST[C.HEAL], 250); assert.equal(C.SPAWN_ENERGY_CAPACITY, 1000); assert.equal(C.TOWER_RANGE, 20);
   assert.equal(C.CONTAINER_HITS, 300); assert.equal(C.MAX_CONSTRUCTION_SITES, 10); assert.equal(C.RANGED_ATTACK_DISTANCE_RATE[2], 0.4);
 });
-test('spawnCreep: cost, busy, spawn time 3/part, returns {object}', () => {
+test('spawnCreep: deferred intent — energy/spawn commit on step; same-tick overwrite; busy only while spawning', () => {
   const w = mk(); const s = w.add(new P.StructureSpawn(w, 50, 50, 'p1')); s.store.energy = 300;
-  const r = s.spawnCreep([C.MOVE, C.ATTACK]); assert.ok(r.object instanceof P.Creep); assert.equal(s.store.energy, 170);
-  assert.equal(s.spawnCreep([C.MOVE]).error, C.ERR_BUSY); assert.equal(s.spawning.needTime, 6);
-  w.current = null; for (let i = 0; i < 6; i++) w.step(); assert.equal(r.object.spawning, false); assert.equal(P.range(r.object, s), 1);
+  const r1 = s.spawnCreep([C.MOVE]); assert.ok(r1.object instanceof P.Creep);
+  assert.equal(s.store.energy, 300, 'energy not deducted until tick resolve'); assert.equal(s.spawning, undefined);
+  assert.equal(w.all(P.Creep).length, 0, 'provisional creep not in world yet');
+  const r = s.spawnCreep([C.MOVE, C.ATTACK]);
+  assert.equal(s.store.energy, 300); w.current = null; w.step();
+  assert.equal(s.store.energy, 170); assert.ok(s.spawning); assert.equal(s.spawning.needTime, 6);
+  assert.equal(w.all(P.Creep).length, 1); assert.equal(r.object.spawning, true); assert.ok(r.object.exists);
+  assert.equal(s.spawnCreep([C.MOVE]).error, C.ERR_BUSY);
+  for (let i = 0; i < 6; i++) w.step(); assert.equal(r.object.spawning, false); assert.equal(P.range(r.object, s), 1);
   w.current = 'p1'; assert.equal(s.spawnCreep(['bogus']).error, C.ERR_INVALID_ARGS); assert.equal(s.spawnCreep(Array(9).fill(C.HEAL)).error, C.ERR_NOT_ENOUGH_ENERGY);
 });
 test('ownership: cannot command enemy creep', () => { const w = mk(); const e = creep(w, 5, 5, [C.MOVE], 'p2'); assert.equal(e.move(C.TOP), C.ERR_NOT_OWNER); });
@@ -72,11 +78,14 @@ test('script errors are caught and logged', () => {
   assert.match(r.frames[1].log.p1[0], /boom/); assert.match(r.frames[1].log.p2[0], /compile error/);
 });
 
-test('CPU limit aborts infinite loops and discards intents', () => {
-  const r = runMatch({ seed: 1, maxTicks: 3, scripts: [
-    "import {getObjectsByPrototype} from 'game/utils'; import {StructureSpawn} from 'game/prototypes'; import {MOVE} from 'game/constants';\nexport function loop(){ getObjectsByPrototype(StructureSpawn).find(s=>s.my).spawnCreep([MOVE]); if (true) { try { while(true){} } catch(e) {} for(;;); } }",
+test('CPU limit aborts infinite loops and discards ALL intents including spawnCreep', () => {
+  const r = runMatch({ seed: 1, maxTicks: 2, cpuMode: 'budget', scripts: [
+    "import {getObjectsByPrototype} from 'game/utils'; import {StructureSpawn} from 'game/prototypes'; import {MOVE} from 'game/constants';\nexport function loop(){ const s = getObjectsByPrototype(StructureSpawn).find(s=>s.my); s.spawnCreep([MOVE]); try { while(true){} } catch(e) {} for(;;); }",
     'export function loop(){}'] });
-  assert.match(r.frames[1].log.p1.join(), /timed out/); assert.equal(r.frames[1].objs.filter(o => o.t === 'Creep').length >= 0, true);
+  assert.match(r.frames[1].log.p1.join(), /timed out/);
+  assert.equal(r.frames[1].objs.filter(o => o.t === 'Creep').length, 0, 'spawnCreep must not commit on timeout');
+  const sp = r.frames[1].objs.find(o => o.t === 'StructureSpawn' && o.o === 'p1');
+  assert.equal(sp.e, r.frames[0].objs.find(o => o.t === 'StructureSpawn' && o.o === 'p1').e, 'energy unchanged');
 });
 test('sandbox: no access to globals / dynamic code', () => {
   const r = runMatch({ seed: 1, maxTicks: 1, scripts: [
@@ -85,22 +94,65 @@ test('sandbox: no access to globals / dynamic code', () => {
   assert.equal(r.frames[1].log.p1[0], 'undefined undefined undefined undefined undefined');
 });
 
-test('capture the flag: setup per public rules (1 flag, 2 towers, 14 creeps each) and BodyPart pickup', async () => {
+test('CTF documented constants (bodies, counts, imports, arenaInfo)', async () => {
+  const CTF = await import('../src/modes/captureTheFlag.js');
+  assert.equal(CTF.CTF_CREEP_COUNT, 14);
+  assert.equal(CTF.CTF_BASIC_TOWERS_PER_PLAYER, 2);
+  assert.equal(CTF.CTF_ADVANCED_TICKS_LIMIT, 10000);
+  assert.equal(CTF.CTF_MAP_SIZE, 100);
+  assert.equal(CTF.CTF_ARENA_NAME, 'Capture the Flag');
+  assert.equal(CTF.CTF_SEASON, 'season_2');
+  assert.equal(CTF.CTF_IMPORT_BASIC, 'arena/season_2/capture_the_flag/basic');
+  assert.equal(CTF.ROSTER.length, 14);
+  const count = (pred) => CTF.ROSTER.filter(pred).length;
+  assert.equal(count(b => b.filter(x => x === C.CARRY).length === 3 && b.filter(x => x === C.MOVE).length === 6), 2);
+  assert.equal(count(b => b.filter(x => x === C.HEAL).length === 6 && b.filter(x => x === C.MOVE).length === 6), 4);
+  assert.equal(count(b => b.filter(x => x === C.RANGED_ATTACK).length === 6 && b.filter(x => x === C.MOVE).length === 6), 4);
+  assert.equal(count(b => b.filter(x => x === C.ATTACK).length === 3 && b.filter(x => x === C.TOUGH).length === 3 && b.filter(x => x === C.MOVE).length === 6), 4);
+  assert.equal(6 * C.HEAL_POWER, 72);
+  assert.equal(6 * C.RANGED_ATTACK_POWER, 60);
+  assert.equal(3 * C.ATTACK_POWER, 90);
+  assert.equal(C.TOWER_CAPACITY, 10);
+});
+test('capture the flag basic: 1 flag + 2 towers + 14 creeps each, BodyPart pickup, controlledBy', async () => {
   const { createMatch } = await import('../src/modes/captureTheFlag.js');
   const w = createMatch({ seed: 3 });
+  assert.equal(w.arena.name, 'Capture the Flag'); assert.equal(w.arena.level, 1); assert.equal(w.arena.season, 'season_2');
   for (const p of ['p1', 'p2']) {
     assert.equal(w.all(P.Flag).filter(f => f._owner === p).length, 1);
     assert.equal(w.all(P.StructureTower).filter(f => f._owner === p).length, 2);
     assert.equal(w.all(P.Creep).filter(f => f._owner === p).length, 14);
   }
   const ids = new Set(w.all().map(o => o.x + ',' + o.y)); assert.equal(ids.size, w.all().length, 'no overlapping objects');
+  const tower = w.all(P.StructureTower)[0]; assert.equal(tower.store.energy, 0); assert.ok(tower.controlledBy instanceof P.Flag);
   const c = w.all(P.Creep)[0]; const n = c.body.length; w.add(new P.BodyPart(w, c.x, c.y, C.HEAL, 100)); w.step();
   assert.equal(c.body.length, n + 1); assert.equal(c.body.at(-1).type, C.HEAL);
 });
-test('capture the flag: stepping on enemy flag wins; arena module import works', () => {
+test('capture the flag advanced: live layout (4 flags, 4 towers, 4 containers, ticksLimit 10000)', async () => {
+  const { createAdvanced, ADVANCED_LAYOUT } = await import('../src/modes/captureTheFlag.js');
+  const w = createAdvanced({ seed: 1 });
+  assert.equal(w.arena.level, 2); assert.equal(w.ticksLimit, 10000);
+  assert.equal(w.all(P.Flag).length, 4);
+  assert.equal(w.all(P.StructureTower).length, 4);
+  assert.equal(w.all(P.StructureContainer).length, 4);
+  assert.equal(w.all(P.Creep).length, 28);
+  assert.equal(w.all(P.Flag).filter(f => f._owner == null).length, 2);
+  for (const [x, y] of ADVANCED_LAYOUT.containers) {
+    const box = w.at(x, y).find(o => o instanceof P.StructureContainer);
+    assert.ok(box); assert.equal(box.store.energy, 1000);
+  }
+  const neu = w.all(P.Flag).find(f => f._owner == null);
+  const tw = w.all(P.StructureTower).find(t => t.controlledBy === neu);
+  assert.ok(tw); assert.equal(tw._owner, null);
+  w.add(new P.Creep(w, neu.x, neu.y, 'p1', [C.MOVE]));
+  w.step();
+  assert.equal(neu._owner, 'p1'); assert.equal(tw._owner, 'p1');
+});
+test('capture the flag: capturing all flags wins; arena BodyPart import works', () => {
   const ctf = fs.readFileSync('bots/ctf.mjs', 'utf8');
   const r = runMatch({ mode: 'capture-the-flag', seed: 2, scripts: [ctf, 'export function loop(){}'] });
-  assert.equal(r.meta.result.winner, 'p1'); assert.ok(!r.frames.some(f => (f.log.p1 || []).some(l => /error/.test(l))));
+  assert.equal(r.meta.result.winner, 'p1');
+  assert.ok(!r.frames.some(f => (f.log.p1 || []).some(l => /error/.test(l))));
 });
 test('spawn and swamp advanced has sources and build works', () => {
   const r = runMatch({ mode: 'spawn-and-swamp-advanced', seed: 1, maxTicks: 5, scripts: ['export function loop(){}', 'export function loop(){}'] });

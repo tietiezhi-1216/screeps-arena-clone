@@ -69,6 +69,8 @@ export class Spawning {
 export class StructureSpawn extends OwnedStructure {
   constructor(w, x, y, owner) { super(w, x, y, C.SPAWN_HITS, owner); this.store = new Store(C.SPAWN_ENERGY_CAPACITY, true); this.spawning = undefined; this.directions = undefined; }
   setDirections(d) { if (!this.my) return ERR_NOT_OWNER; if (!Array.isArray(d) || !d.length || d.some(x => !DIRS[x])) return ERR_INVALID_ARGS; this.directions = d.slice(); return OK; }
+  // 官方：loop 只登记 intent，tick 末统一结算。返回占位 creep，成功才入场。
+  // 同 tick 再次调用覆盖上一次 intent。CPU 超时丢弃全部 intent → 不留已扣能量/已出兵。
   spawnCreep(body) {
     if (!this.my) return { error: ERR_NOT_OWNER };
     if (this.spawning) return { error: ERR_BUSY };
@@ -76,9 +78,8 @@ export class StructureSpawn extends OwnedStructure {
     const cost = body.reduce((a, b) => a + C.BODYPART_COST[b], 0);
     const w = this._w, pool = [this, ...w.all(StructureExtension).filter(e => e._owner === this._owner && range(e, this) <= C.SPAWN_RANGE)];
     if (pool.reduce((a, s) => a + (s.store.energy || 0), 0) < cost) return { error: C.ERR_NOT_ENOUGH_ENERGY };
-    let left = cost; for (const s of pool) { const t = Math.min(left, s.store.energy || 0); s.store.energy -= t; left -= t; if (!left) break; }
-    const creep = w.add(new Creep(w, this.x, this.y, this._owner, body)); creep.spawning = true;
-    this.spawning = new Spawning(this, creep, body.length * C.CREEP_SPAWN_TIME);
+    const creep = new Creep(w, this.x, this.y, this._owner, body); creep.spawning = true;
+    w.intent(this, 'spawn', { body: body.slice(), cost, creep });
     return { object: creep };
   }
 }
