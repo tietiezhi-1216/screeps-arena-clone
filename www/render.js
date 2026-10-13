@@ -2,17 +2,49 @@
 export const TS = 8, N = 100;
 export const COLORS = { p1: '#5ec8ff', p2: '#ff6f6f', neutral: '#bbbbbb', energy: '#ffe56d' };
 const PART = { m: '#a9b7c6', w: '#ffe56d', c: '#777777', a: '#f93842', r: '#5d80b2', h: '#65fd62', t: '#ffffff' };
+// 地形：移植 screeps-blockly-mobile 的融合轮廓画法（官方配色：平原 #2b2b2b、墙 #111 相邻融合圆角、沼泽 #292b18 细描边）
+const TT = 16; // 地形贴图分辨率（每格像素），绘制时缩放到 TS
 export function terrainCanvas(terrain) {
-  const c = new OffscreenCanvas(N * TS, N * TS), g = c.getContext('2d');
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-    const t = terrain[y * N + x]; g.fillStyle = t === 1 ? '#0c0c0c' : t === 2 ? '#2c3a20' : '#3a3a3a'; g.fillRect(x * TS, y * TS, TS, TS); if (t === 1) { g.fillStyle = '#1e1e1e'; g.fillRect(x * TS + 1, y * TS + 1, TS - 2, TS - 2); }
+  const NN = N * TT, c = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(NN, NN) : Object.assign(document.createElement('canvas'), { width: NN, height: NN });
+  const g = c.getContext('2d'), T = (x, y) => (x < 0 || y < 0 || x >= N || y >= N) ? 1 : terrain[y * N + x];
+  g.fillStyle = '#2b2b2b'; g.fillRect(0, 0, NN, NN);
+  const blob = (is, fill, rOut, rIn) => {
+    g.fillStyle = fill; g.beginPath(); const h = TT / 2;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const X = x * TT, Y = y * TT;
+      if (is(x, y)) {
+        for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+          const qx = X + h + (sx < 0 ? -h : 0), qy = Y + h + (sy < 0 ? -h : 0);
+          if (is(x + sx, y) || is(x, y + sy)) { g.rect(qx, qy, h, h); continue; }
+          const cx_ = X + h, cy_ = Y + h, ox = X + h + sx * h, oy = Y + h + sy * h, r = rOut * TT;
+          g.moveTo(cx_, cy_); g.lineTo(ox, cy_); g.lineTo(ox, oy - sy * r); g.arcTo(ox, oy, ox - sx * r, oy, r); g.lineTo(cx_, oy); g.closePath();
+        }
+      } else if (rIn) {
+        for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+          if (!(is(x + sx, y) && is(x, y + sy) && is(x + sx, y + sy))) continue;
+          const ox = X + h + sx * h, oy = Y + h + sy * h, r = rIn * TT;
+          const a0 = sy > 0 ? Math.PI / 2 : -Math.PI / 2, a1 = sx > 0 ? 0 : Math.PI, d = ((a1 - a0) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+          g.moveTo(ox, oy); g.lineTo(ox - sx * r, oy); g.arc(ox - sx * r, oy - sy * r, r, a0, a1, d > Math.PI); g.closePath();
+        }
+      }
+    }
+    g.fill();
+  };
+  const isS = (x, y) => T(x, y) === 2;
+  blob(isS, '#292b18', .35, 0);
+  g.strokeStyle = '#3a3e1d'; g.lineWidth = 1.5; g.beginPath();
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (isS(x, y)) {
+    const X = x * TT, Y = y * TT, m = 5;
+    if (!isS(x, y - 1)) { g.moveTo(X + m, Y + .75); g.lineTo(X + TT - m, Y + .75); } if (!isS(x, y + 1)) { g.moveTo(X + m, Y + TT - .75); g.lineTo(X + TT - m, Y + TT - .75); }
+    if (!isS(x - 1, y)) { g.moveTo(X + .75, Y + m); g.lineTo(X + .75, Y + TT - m); } if (!isS(x + 1, y)) { g.moveTo(X + TT - .75, Y + m); g.lineTo(X + TT - .75, Y + TT - m); }
   }
-  g.strokeStyle = '#ffffff08'; for (let i = 0; i <= N; i += 10) { g.beginPath(); g.moveTo(i * TS, 0); g.lineTo(i * TS, N * TS); g.moveTo(0, i * TS); g.lineTo(N * TS, i * TS); g.stroke(); }
+  g.stroke();
+  blob((x, y) => T(x, y) === 1, '#111111', .45, .3);
   return c;
 }
 const cx = v => v * TS + TS / 2;
 export function drawFrame(g, terrainC, f, prev, k = 1, sel) {
-  g.drawImage(terrainC, 0, 0);
+  g.imageSmoothingEnabled = true; g.drawImage(terrainC, 0, 0, N * TS, N * TS);
   const pm = prev ? new Map(prev.objs.map(o => [o.id, o])) : new Map();
   const pos = o => { const p = pm.get(o.id); if (!p || o.t !== 'Creep') return [cx(o.x), cx(o.y)]; return [cx(p.x + (o.x - p.x) * k), cx(p.y + (o.y - p.y) * k)]; };
   const order = ['EffectZone', 'AreaEffect', 'Portal', 'ConstructionBoost', 'StructureGoal', 'StructureRoad', 'BodyPart', 'Flag', 'ConstructionSite', 'Resource', 'Source', 'StructureContainer', 'StructureExtension', 'StructureWall', 'StructureSpawn', 'StructureTower', 'Creep', 'StructureRampart', 'ScoreCollector'];

@@ -20,3 +20,8 @@
 - `GameObject.controlledBy` 返回控制该对象的 Flag；`BodyPart` 经 `arena/season_2/capture_the_flag/{basic|advanced}` 导入。
 
 模式说明：[SPAWN_AND_SWAMP.md](./SPAWN_AND_SWAMP.md)、[CAPTURE_THE_FLAG.md](./CAPTURE_THE_FLAG.md)、[CPU.md](./CPU.md)。
+
+## 保存（v0.7）
+对齐官方客户端“每个 Arena 一份当前脚本、编辑即保存”的做法：
+- 积木工作区按竞技场（模式 + 基础/高级）分别自动保存到本地（`sa.ws.<mode>[-advanced]`），切换模式即切换脚本；新玩家默认空白。
+- 每局结束自动保存回放（IndexedDB，保留最近 20 局），首页「回放」可查看。

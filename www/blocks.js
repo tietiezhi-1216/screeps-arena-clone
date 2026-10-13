@@ -76,26 +76,61 @@ const DEFAULT_WS = { variables: [{ name: 'creep', id: 'vc' }, { name: 'enemySpaw
   blocks: { languageVersion: 0, blocks: [{ ...blk('arena_spawn', { BODY: 'MOVE, MOVE, ATTACK, ATTACK' }, { S: val_(blk('arena_first', null, { L: val_(blk('arena_objects', { F: 'my', P: 'StructureSpawn' })) })) },
     blk('variables_set', { VAR: { id: 've' } }, { VALUE: val_(blk('arena_first', null, { L: val_(blk('arena_objects', { F: 'enemy', P: 'StructureSpawn' })) })) },
       blk('controls_forEach', { VAR: { id: 'vc' } }, { LIST: val_(blk('arena_objects', { F: 'my', P: 'Creep' })), DO: { block: blk('arena_act_or_move', { A: 'attack' }, { C: val_(varGet('vc')), T: val_(varGet('ve')) }) } }))), x: 20, y: 20 }] } };
-const THEME = Blockly.Theme.defineTheme('arena-dark', { base: Blockly.Themes.Classic, componentStyles: { workspaceBackgroundColour: '#15171b', flyoutBackgroundColour: '#23262d', flyoutOpacity: 0.97, scrollbarColour: '#555', toolboxBackgroundColour: '#23262d' } });
+const THEME = Blockly.Theme.defineTheme('arena-dark', { name: 'arena-dark', base: Blockly.Themes.Classic,
+  componentStyles: { workspaceBackgroundColour: '#1e1f24', toolboxBackgroundColour: '#25272d', toolboxForegroundColour: '#e6e6e6', flyoutBackgroundColour: '#25272d', flyoutForegroundColour: '#e6e6e6', flyoutOpacity: 1, scrollbarColour: '#555', scrollbarOpacity: 0.6, insertionMarkerColour: '#ffffff', insertionMarkerOpacity: 0.3, cursorColour: '#d0d0d0' } });
 
+// 交互沿用 screeps-blockly-mobile：顶部分类 chips → 全宽积木列表（按最宽积木缩放、竖向滚动）；点按 = 添加到可见区域；长按 = 拖出
 window.ArenaBlocks = {
   CATS, toCode,
   create(div, saved, onChange) {
-    const ws = Blockly.inject(div, { toolbox: { kind: 'flyoutToolbox', contents: [] }, trashcan: true, renderer: 'zelos', theme: THEME,
-      zoom: { controls: true, wheel: true, pinch: true, startScale: 0.7, minScale: 0.3, maxScale: 2 }, move: { scrollbars: true, drag: true, wheel: true }, grid: { spacing: 24, length: 2, colour: '#2a2d35', snap: true } });
-    try { Blockly.serialization.workspaces.load(saved || DEFAULT_WS, ws); } catch (e) { ws.clear(); Blockly.serialization.workspaces.load(DEFAULT_WS, ws); }
-    const fly = ws.getFlyout(); fly.hide();
-    ws.addChangeListener(e => { if (e.type === Blockly.Events.BLOCK_DRAG && e.isStart && fly.isVisible()) fly.hide(); if (!e.isUiEvent) onChange(toCode(ws), Blockly.serialization.workspaces.save(ws)); });
-    // 点按 flyout 里的积木 = 加到可见区域中央（手机上比拖拽好用）
+    const ws = Blockly.inject(div, { toolbox: { kind: 'flyoutToolbox', contents: [] }, trashcan: false, renderer: 'zelos', theme: THEME,
+      zoom: { controls: false, wheel: true, pinch: true, startScale: 0.8, minScale: 0.4, maxScale: 2 }, move: { scrollbars: true, drag: true, wheel: true },
+      grid: { spacing: 24, length: 2, colour: '#34363d', snap: true } });
+    if (saved) { try { Blockly.serialization.workspaces.load(saved, ws); } catch (e) { ws.clear(); } } // 默认空白工作区（无内置程序）
+    const fly = ws.getFlyout(); let flyScale = 0.8, lpArmed = false;
+    fly.getFlyoutScale = () => flyScale;
+    const reflow = fly.reflowInternal_.bind(fly);
+    fly.reflowInternal_ = function () { reflow(); const W = Math.round(div.getBoundingClientRect().width);
+      if (W > 0 && this.width_ !== W) { this.width_ = W; this.setBackgroundPath(W, this.height_ || 0); this.position(); ws.resize(); } };
+    fly.dragAngleRange_ = 0; fly.isScrollable = () => true; fly.wouldDelete = () => false;
+    fly.getClientRect = (orig => function () { return this.isVisible() ? orig.call(this) : null; })(fly.getClientRect);
+    let lpT = null, lp0 = null;
+    div.addEventListener('pointerdown', e => { if (!fly.isVisible() || !e.target.closest('.blocklyFlyout .blocklyDraggable')) return; lp0 = [e.clientX, e.clientY];
+      clearTimeout(lpT); lpT = setTimeout(() => { fly.dragAngleRange_ = 180; lpArmed = true; navigator.vibrate && navigator.vibrate(20); }, 380); }, true);
+    div.addEventListener('pointermove', e => { if (lp0 && !lpArmed && Math.hypot(e.clientX - lp0[0], e.clientY - lp0[1]) > 8) { clearTimeout(lpT); lp0 = null; } }, true);
+    const lpEnd = () => { clearTimeout(lpT); lp0 = null; setTimeout(() => { fly.dragAngleRange_ = 0; lpArmed = false; }, 0); };
+    div.addEventListener('pointerup', lpEnd, true); div.addEventListener('pointercancel', lpEnd, true);
+    fly.hide();
+    const api = { ws, onFly: null, isOpen: () => fly.isVisible() };
+    const close = () => { fly.hide(); api.onFly?.(null); Blockly.svgResize(ws); };
+    ws.addChangeListener(e => {
+      if (e.type === Blockly.Events.BLOCK_DRAG && e.isStart && fly.isVisible()) close();
+      if (!e.isUiEvent) onChange(toCode(ws), Blockly.serialization.workspaces.save(ws));
+    });
     fly.getWorkspace().addChangeListener(e => { if (e.type !== Blockly.Events.CLICK || !e.blockId || !fly.isVisible()) return; setTimeout(() => {
       const src = fly.getWorkspace().getBlockById(e.blockId)?.getRootBlock(); if (!src) return; const st = Blockly.serialization.blocks.save(src, { addCoordinates: false });
-      const m = ws.getMetricsManager().getViewMetrics(true); const nb = Blockly.serialization.blocks.append(st, ws); nb.moveBy(m.left + 30 + Math.random() * 40, m.top + 60 + Math.random() * 40); fly.hide(); }, 0); });
-    const api = {
-      ws, openCat(id) { const c = CATS.find(c => c.id === id); if (c.custom) ws.updateToolbox({ kind: 'categoryToolbox', contents: [] });
+      const m = ws.getMetricsManager().getViewMetrics(true); const nb = Blockly.serialization.blocks.append(st, ws);
+      const n = ws.getTopBlocks(false).length; nb.moveBy(m.left + 24 + (n % 4) * 16, m.top + 24 + (n % 6) * 28); close(); }, 0); });
+    Object.assign(api, {
+      openCat(id) {
+        const c = CATS.find(c => c.id === id); if (!c) return;
+        if (fly.isVisible() && api.cur === id) return close();
+        api.cur = id;
         const contents = c.custom === 'VARIABLE' ? Blockly.DataCategory.flyoutCategory(ws) : c.custom === 'PROCEDURE' ? Blockly.Procedures.flyoutCategory(ws) : CAT[id].map(type => ({ kind: 'block', type }));
-        ws.updateToolbox({ kind: 'flyoutToolbox', contents }); fly.show(contents); },
-      code: () => toCode(ws), resize: () => Blockly.svgResize(ws), reset() { ws.clear(); Blockly.serialization.workspaces.load(DEFAULT_WS, ws); },
-    };
+        flyScale = 0.8; fly.show(contents);
+        const W = div.getBoundingClientRect().width - 24; let maxW = 0;
+        for (const b of fly.getWorkspace().getTopBlocks(false)) maxW = Math.max(maxW, b.getHeightWidth().width);
+        const sc = Math.max(0.45, Math.min(0.85, W / (maxW || 1))); if (Math.abs(sc - flyScale) > 0.01) { flyScale = sc; fly.show(contents); }
+        for (const b of fly.getWorkspace().getAllBlocks(false)) for (const inp of b.inputList) for (const f of inp.fieldRow) if (f.setEnabled) f.setEnabled(false);
+        fly.scrollToStart && fly.scrollToStart(); api.onFly?.(id); Blockly.svgResize(ws);
+      },
+      closeCat: close,
+      code: () => toCode(ws), resize: () => Blockly.svgResize(ws),
+      load(state) { Blockly.Events.disable(); ws.clear(); if (state) try { Blockly.serialization.workspaces.load(state, ws); } catch (e) {} Blockly.Events.enable(); ws.clearUndo(); onChange(toCode(ws), Blockly.serialization.workspaces.save(ws)); },
+      undo: r => ws.undo(!!r), zoom: d => ws.zoomCenter(d), center: () => ws.scrollCenter(),
+      deleteSelected() { const s = Blockly.getSelected && Blockly.getSelected(); if (s && s.workspace === ws && s.isDeletable()) s.dispose(true, true); },
+      count: () => ws.getAllBlocks(false).length,
+    });
     onChange(toCode(ws), Blockly.serialization.workspaces.save(ws));
     return api;
   },

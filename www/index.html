@@ -1,50 +1,58 @@
 <!doctype html><html lang="zh"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#0a0a0a"><title>Screeps Arena</title><link rel="icon" href="icon.svg"><link rel="stylesheet" href="style.css"></head><body>
-<canvas id="cv"></canvas>
-<div id="hud"><span class="chip pl p1"><i class="dot"></i><span id="p1info">P1</span></span><span class="chip" id="tick">0</span><span class="chip pl p2"><i class="dot"></i><span id="p2info">P2</span></span><span class="chip st" id="status"></span></div>
-<div id="result"></div>
-<div id="ctl" class="hidden"><button id="step" data-icon="player-track-next" class="iconbtn"></button><input id="scrub" type="range" min="0" max="0" value="0"></div>
-<div id="buildBar" class="hidden"><div id="bpList"></div><div class="row"><span id="bbMsg"></span><button id="bbClear" data-icon="eraser"><span class="lb">清空</span></button><button id="bbDone" data-icon="check" class="primary"><span class="lb">完成</span></button></div></div>
-<div id="sheet"><div class="pnHead"><div class="pnTabs"><button data-s="inspect" class="on">对象</button><button data-s="p1">P1 日志</button><button data-s="p2">P2 日志</button></div><button id="sheetClose" data-icon="x" class="iconbtn"></button></div><pre id="sheetBody"></pre></div>
-<nav id="bar">
- <button id="btnRoom" data-icon="broadcast"><span class="lb">对战</span></button>
- <button id="btnCode" data-icon="code"><span class="lb">代码</span></button>
- <button id="btnBuild" data-icon="hammer"><span class="lb">建造</span></button>
- <button id="play" data-icon="player-play"><span class="lb">播放</span></button>
- <button id="speed" data-icon="gauge"><span class="lb">1x</span></button>
- <button id="conBtn" data-icon="terminal-2"><span class="lb">日志</span></button>
- <button id="btnMenu" data-icon="settings"><span class="lb">设置</span></button>
-</nav>
-<div id="editor" class="hidden">
- <div id="edTabs"><div class="seg" id="edMode"><button data-m="text" class="on">文本</button><button data-m="blocks">积木</button></div><select id="tpl"><option value="" disabled selected hidden>模板</option></select><button id="fsm" class="iconbtn" data-icon="zoom-out"></button><button id="fsp" class="iconbtn" data-icon="zoom-in"></button><button id="check" class="iconbtn" data-icon="bug"></button><button id="edClose" data-icon="check" class="primary"><span class="lb">完成</span></button></div>
- <div class="editor" id="textEd"><pre id="gutter"></pre><div class="ed-wrap"><pre id="hl" aria-hidden="true"></pre><textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea></div></div>
- <div id="blocksEd" class="hidden"><div class="catbar" id="catbar"></div><div id="blocklyDiv"></div></div>
- <div id="codeMsg"></div><div class="snips" id="snips"></div><div class="keys" id="keys"></div>
-</div>
-<div id="room" class="hidden panel">
- <div class="pTitle">对战</div>
- <div id="netStatus" class="status">未连接</div>
- <input id="nick" placeholder="昵称" maxlength="16">
- <div class="row"><select id="mode"></select></div>
- <div class="row"><label class="lb muted" style="align-self:center">种子</label><input id="seed" type="number" value="1"></div>
- <div class="row"><button id="hostBtn" data-icon="home" class="primary"><span class="lb">开房</span></button><button id="findBtn" data-icon="search"><span class="lb">搜索</span></button></div>
- <div class="row"><input id="ip" placeholder="房主 IP"><button id="joinBtn" data-icon="login" class="narrow"><span class="lb">加入</span></button></div>
- <div id="hosts"></div><div id="lobby"></div>
- <div class="row"><button id="lanStart" data-icon="player-play" class="primary hidden"><span class="lb">开始对局</span></button><button id="lanSend" data-icon="upload" class="primary hidden"><span class="lb">提交代码</span></button><button id="lanLeave" data-icon="x" class="hidden"><span class="lb">断开</span></button></div>
- <div class="sep"></div>
- <div class="row"><select id="diff"><option value="easy">简单</option><option value="normal" selected>普通</option><option value="hard">困难</option></select><button id="runTop" data-icon="device-gamepad-2" class="primary narrow"><span class="lb">对战 AI</span></button></div>
- <button id="roomClose" data-icon="x" class="ghost"><span class="lb">关闭</span></button>
-</div>
-<div id="menu" class="hidden panel">
- <div class="pTitle">设置</div>
- <button id="save" data-icon="device-floppy"><span class="lb">保存回放</span></button>
- <button id="load" data-icon="file-import"><span class="lb">载入回放</span></button><input type="file" id="file" hidden accept=".json,application/json">
- <button id="updBtn" data-icon="download"><span class="lb">检查更新</span></button>
- <div id="ver" class="muted"></div>
- <button id="mClose" data-icon="x" class="ghost"><span class="lb">关闭</span></button>
-</div>
-<div id="start"><div class="startTitle"><img src="icon.svg" class="logo"><div class="t1">SCREEPS ARENA</div></div>
- <div class="startBtns"><button id="sNet" data-icon="broadcast" class="big primary"><span class="lb">局域网对战</span></button><button id="sPractice" data-icon="device-gamepad-2" class="big"><span class="lb">练习</span></button><button id="sCode" data-icon="code" class="big"><span class="lb">编写代码</span></button></div><div id="startVer" class="muted"></div></div>
+<meta name="theme-color" content="#0b0c0f"><title>Screeps Arena</title><link rel="icon" href="icon.svg"><link rel="stylesheet" href="style.css"></head><body>
+
+<section id="home" class="screen on">
+ <div class="hero"><img src="icon.svg" class="logo" alt=""><div class="brand">SCREEPS<span>ARENA</span></div></div>
+ <div class="actions">
+  <button id="goLan" class="btn primary lg" data-icon="broadcast"><span class="lb">局域网对战</span></button>
+  <button id="goAi" class="btn lg" data-icon="device-gamepad-2"><span class="lb">人机练习</span></button>
+  <button id="goReplays" class="link" data-icon="history"><span class="lb">回放</span></button>
+ </div>
+ <div id="ver" class="foot"></div>
+</section>
+
+<section id="setup" class="screen">
+ <header class="top"><button class="icon back" data-back data-icon="arrow-left"></button><h1 id="setupTitle">人机练习</h1></header>
+ <div class="body">
+  <div id="modes" class="cards"></div>
+  <div class="field"><div class="seg" id="level"><button data-v="1" class="on">基础</button><button data-v="2">高级</button></div></div>
+  <div class="field" id="diffRow"><div class="seg" id="diff"><button data-v="easy">简单</button><button data-v="normal" class="on">普通</button><button data-v="hard">困难</button></div></div>
+ </div>
+ <footer class="bottom"><button id="toEditor" class="btn" data-icon="puzzle"><span class="lb">积木</span></button><button id="setupGo" class="btn primary" data-icon="player-play"><span class="lb">开始</span></button></footer>
+</section>
+
+<section id="lobby" class="screen">
+ <header class="top"><button class="icon back" data-back data-icon="arrow-left"></button><h1>局域网</h1><button id="scan" class="icon" data-icon="refresh"></button></header>
+ <div class="body">
+  <div id="netState" class="state"></div>
+  <div id="rooms" class="list"></div>
+  <div id="players" class="list"></div>
+  <div id="manual" class="row hidden"><input id="ip" inputmode="decimal" placeholder="房主 IP"><button id="joinIp" class="btn sm">加入</button></div>
+  <button id="showManual" class="link center"><span class="lb">手动输入 IP</span></button>
+ </div>
+ <footer class="bottom"><button id="lobbyEdit" class="btn" data-icon="puzzle"><span class="lb">积木</span></button><button id="lobbyMain" class="btn primary" data-icon="home"><span class="lb">创建房间</span></button></footer>
+</section>
+
+<section id="editor" class="screen">
+ <header class="edbar"><button class="icon" id="edBack" data-icon="arrow-left"></button><div id="cats"></div><button id="edDone" class="btn primary sm" data-icon="check"><span class="lb">完成</span></button></header>
+ <div id="blocklyDiv"><div id="edTools"><button id="edUndo" data-icon="arrow-back-up"></button><button id="edRedo" data-icon="arrow-forward-up"></button><button id="edZin" data-icon="zoom-in"></button><button id="edZout" data-icon="zoom-out"></button><button id="edTrash" data-icon="trash"></button></div>
+  <div id="edEmpty">点上方分类，选择积木开始搭建</div></div>
+</section>
+
+<section id="match" class="screen">
+ <canvas id="cv"></canvas>
+ <div class="hud"><button id="mClose" class="icon glass" data-icon="x"></button><div class="score"><span class="pl p1"><i></i><b id="s1">0</b></span><span id="tick">0</span><span class="pl p2"><b id="s2">0</b><i></i></span></div><span class="spacer"></span></div>
+ <div class="dock"><input id="scrub" type="range" min="0" max="0" value="0"><button id="speed" class="pill glass">1x</button><button id="play" class="icon round glass" data-icon="player-play"></button></div>
+ <div id="inspect" class="card hidden"></div>
+ <div id="result" class="card result hidden"><div id="resTitle"></div><div id="resSub"></div><div class="row"><button id="resBack" class="btn">返回</button><button id="resAgain" class="btn primary">再来一局</button></div></div>
+ <div id="busy" class="busy hidden"><div class="spin"></div><span id="busyT">模拟中</span></div>
+</section>
+
+<section id="replays" class="screen">
+ <header class="top"><button class="icon back" data-back data-icon="arrow-left"></button><h1>回放</h1></header>
+ <div class="body"><div id="rlist" class="list"></div></div>
+</section>
+
 <script src="version.js"></script><script src="icons.js"></script><script src="vendor/blockly_compressed.js"></script><script src="vendor/blocks_compressed.js"></script><script src="vendor/javascript_compressed.js"></script><script src="vendor/msg-zh.js"></script><script src="blocks.js"></script><script src="vendor/capacitor.js"></script><script src="update.js"></script>
 <script type="module" src="app.js"></script></body></html>
