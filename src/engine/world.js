@@ -125,7 +125,7 @@ export class World {
     for (const [o, m] of I) {
       if (!m.spawn || !(o instanceof P.StructureSpawn) || !o.exists || o.spawning) continue;
       const { cost, creep, body } = m.spawn;
-      const pool = [o, ...this.all(P.StructureExtension).filter(e => e._owner === o._owner && range(e, o) <= C.SPAWN_RANGE)];
+      const pool = [o, ...this.all(P.StructureExtension).filter(e => e._owner === o._owner)];
       if (pool.reduce((a, s) => a + (s.store.energy || 0), 0) < cost) continue;
       let left = cost; for (const s of pool) { const t = Math.min(left, s.store.energy || 0); s.store.energy -= t; left -= t; if (!left) break; }
       this.add(creep); creep.spawning = true; creep.x = o.x; creep.y = o.y;
