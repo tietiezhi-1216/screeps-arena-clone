@@ -1,58 +1,87 @@
 <!doctype html><html lang="zh"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#0b0c0f"><title>Screeps Arena</title><link rel="icon" href="icon.svg"><link rel="stylesheet" href="style.css"></head><body>
+<meta name="theme-color" content="#1C2533"><title>Screeps Arena</title><link rel="icon" href="icon.svg"><link rel="stylesheet" href="style.css"></head><body>
 
 <section id="home" class="screen on">
- <div class="hero"><img src="icon.svg" class="logo" alt=""><div class="brand">SCREEPS<span>ARENA</span></div></div>
- <div class="actions">
-  <button id="goLan" class="btn primary lg" data-icon="broadcast"><span class="lb">局域网对战</span></button>
-  <button id="goAi" class="btn lg" data-icon="device-gamepad-2"><span class="lb">人机练习</span></button>
-  <button id="goReplays" class="link" data-icon="history"><span class="lb">回放</span></button>
+ <div class="home">
+  <div class="brand"><img src="icon.svg" alt=""><div><div class="bt">SCREEPS <b>ARENA</b></div><div class="bs">积木编程 · 竞技对战</div></div></div>
+  <div class="cur" id="homeCur"></div>
+  <div class="menu">
+   <button id="goStart" class="primary" data-icon="player-play"><span class="lb">开始</span></button>
+   <button id="goScripts" data-icon="file-code"><span class="lb">我的脚本</span></button>
+   <button id="goReplays" data-icon="history"><span class="lb">回放</span></button>
+  </div>
+  <div id="ver" class="foot"></div>
  </div>
- <div id="ver" class="foot"></div>
+</section>
+
+<section id="scripts" class="screen">
+ <header class="head"><button class="hb" data-back data-icon="arrow-left"></button><h1>我的脚本</h1><button id="newScript" class="hb" data-icon="plus"></button></header>
+ <div class="split">
+  <div class="body"><div class="sec">选择出战脚本</div><div id="slist" class="list"></div></div>
+  <footer class="side"><button id="scEdit" class="btn" data-icon="pencil"><span class="lb">编辑积木</span></button><button id="scNext" class="btn primary" data-icon="chevron-right"><span class="lb">选择模式</span></button></footer>
+ </div>
+</section>
+
+<section id="modes" class="screen">
+ <header class="head"><button class="hb" data-back data-icon="arrow-left"></button><h1>选择模式</h1><div class="seg" id="level"><button data-v="1" class="on">基础</button><button data-v="2">高级</button></div></header>
+ <div class="body"><div id="mcards" class="mcards"></div></div>
 </section>
 
 <section id="setup" class="screen">
- <header class="top"><button class="icon back" data-back data-icon="arrow-left"></button><h1 id="setupTitle">人机练习</h1></header>
- <div class="body">
-  <div id="modes" class="cards"></div>
-  <div class="field"><div class="seg" id="level"><button data-v="1" class="on">基础</button><button data-v="2">高级</button></div></div>
-  <div class="field" id="diffRow"><div class="seg" id="diff"><button data-v="easy">简单</button><button data-v="normal" class="on">普通</button><button data-v="hard">困难</button></div></div>
+ <header class="head"><button class="hb" data-back data-icon="arrow-left"></button><h1 id="setupTitle"></h1></header>
+ <div class="split">
+  <div class="body">
+   <div class="banner" id="banner"></div>
+   <div class="sec">人机练习</div>
+   <div class="list" id="aiList">
+    <button class="row" data-diff="easy"><span class="ic2" data-icon="robot"></span><span class="lb">简单</span><span class="v">适合入门</span></button>
+    <button class="row" data-diff="normal"><span class="ic2" data-icon="robot"></span><span class="lb">普通</span><span class="v">均衡</span></button>
+    <button class="row" data-diff="hard"><span class="ic2" data-icon="robot"></span><span class="lb">困难</span><span class="v">强力</span></button>
+   </div>
+   <div class="sec">真人对战</div>
+   <div class="list"><button class="row" id="goLan"><span class="ic2" data-icon="broadcast"></span><span class="lb">局域网对战</span><span class="v">同一 Wi-Fi</span></button></div>
+  </div>
  </div>
- <footer class="bottom"><button id="toEditor" class="btn" data-icon="puzzle"><span class="lb">积木</span></button><button id="setupGo" class="btn primary" data-icon="player-play"><span class="lb">开始</span></button></footer>
 </section>
 
 <section id="lobby" class="screen">
- <header class="top"><button class="icon back" data-back data-icon="arrow-left"></button><h1>局域网</h1><button id="scan" class="icon" data-icon="refresh"></button></header>
- <div class="body">
-  <div id="netState" class="state"></div>
-  <div id="rooms" class="list"></div>
-  <div id="players" class="list"></div>
-  <div id="manual" class="row hidden"><input id="ip" inputmode="decimal" placeholder="房主 IP"><button id="joinIp" class="btn sm">加入</button></div>
-  <button id="showManual" class="link center"><span class="lb">手动输入 IP</span></button>
+ <header class="head"><button class="hb" data-back data-icon="arrow-left"></button><h1>局域网对战</h1><button id="scan" class="hb" data-icon="refresh"></button></header>
+ <div class="split">
+  <div class="body">
+   <div id="netState" class="state"></div>
+   <div id="rooms" class="list"></div>
+   <div id="players" class="list"></div>
+   <div id="manual" class="irow hidden"><input id="ip" inputmode="decimal" placeholder="房主 IP"><button id="joinIp" class="btn sm">加入</button></div>
+   <button id="showManual" class="link"><span class="lb">手动输入 IP</span></button>
+  </div>
+  <footer class="side"><button id="lobbyMain" class="btn primary" data-icon="home"><span class="lb">创建房间</span></button></footer>
  </div>
- <footer class="bottom"><button id="lobbyEdit" class="btn" data-icon="puzzle"><span class="lb">积木</span></button><button id="lobbyMain" class="btn primary" data-icon="home"><span class="lb">创建房间</span></button></footer>
 </section>
 
 <section id="editor" class="screen">
- <header class="edbar"><button class="icon" id="edBack" data-icon="arrow-left"></button><div id="cats"></div><button id="edDone" class="btn primary sm" data-icon="check"><span class="lb">完成</span></button></header>
+ <header class="edbar"><button class="hb" id="edBack" data-icon="arrow-left"></button><div id="edName"></div><button id="edDone" class="btn primary sm" data-icon="check"><span class="lb">完成</span></button></header>
+ <div id="cats"></div>
  <div id="blocklyDiv"><div id="edTools"><button id="edUndo" data-icon="arrow-back-up"></button><button id="edRedo" data-icon="arrow-forward-up"></button><button id="edZin" data-icon="zoom-in"></button><button id="edZout" data-icon="zoom-out"></button><button id="edTrash" data-icon="trash"></button></div>
   <div id="edEmpty">点上方分类，选择积木开始搭建</div></div>
 </section>
 
 <section id="match" class="screen">
  <canvas id="cv"></canvas>
- <div class="hud"><button id="mClose" class="icon glass" data-icon="x"></button><div class="score"><span class="pl p1"><i></i><b id="s1">0</b></span><span id="tick">0</span><span class="pl p2"><b id="s2">0</b><i></i></span></div><span class="spacer"></span></div>
- <div class="dock"><input id="scrub" type="range" min="0" max="0" value="0"><button id="speed" class="pill glass">1x</button><button id="play" class="icon round glass" data-icon="player-play"></button></div>
+ <div class="hud"><span id="runSt" class="st">运行中</span><span class="hk">TICK</span><b id="tick">0</b><span class="hk">能量</span><b id="energy">0</b><span class="sc"><i class="p1"></i><b id="s1">0</b><span>:</span><b id="s2">0</b><i class="p2"></i></span></div>
+ <div class="dock"><button id="mClose" class="db" data-icon="x"></button><input id="scrub" type="range" min="0" max="0" value="0"><button id="speed" class="db">1x</button><button id="play" class="db pri" data-icon="player-play"></button></div>
  <div id="inspect" class="card hidden"></div>
- <div id="result" class="card result hidden"><div id="resTitle"></div><div id="resSub"></div><div class="row"><button id="resBack" class="btn">返回</button><button id="resAgain" class="btn primary">再来一局</button></div></div>
+ <div id="result" class="card result hidden"><div id="resTitle"></div><div id="resSub"></div><div class="row2"><button id="resBack" class="btn">返回</button><button id="resAgain" class="btn primary">再来一局</button></div></div>
  <div id="busy" class="busy hidden"><div class="spin"></div><span id="busyT">模拟中</span></div>
 </section>
 
 <section id="replays" class="screen">
- <header class="top"><button class="icon back" data-back data-icon="arrow-left"></button><h1>回放</h1></header>
+ <header class="head"><button class="hb" data-back data-icon="arrow-left"></button><h1>回放</h1></header>
  <div class="body"><div id="rlist" class="list"></div></div>
 </section>
 
-<script src="version.js"></script><script src="icons.js"></script><script src="vendor/blockly_compressed.js"></script><script src="vendor/blocks_compressed.js"></script><script src="vendor/javascript_compressed.js"></script><script src="vendor/msg-zh.js"></script><script src="blocks.js"></script><script src="vendor/capacitor.js"></script><script src="update.js"></script>
+<div id="dlg" class="dlg hidden"><div class="box"><div class="dt" id="dlgT"></div><div id="dlgB"></div><div class="row2"><button id="dlgNo" class="btn">取消</button><button id="dlgOk" class="btn primary">确定</button></div></div></div>
+<div id="sheet" class="dlg hidden"><div class="box" id="sheetB"></div></div>
+
+<script src="version.js"></script><script src="icons.js"></script><script src="icons-extra.js"></script><script src="vendor/blockly_compressed.js"></script><script src="vendor/blocks_compressed.js"></script><script src="vendor/javascript_compressed.js"></script><script src="vendor/msg-zh.js"></script><script src="blocks.js"></script><script src="vendor/capacitor.js"></script><script src="update.js"></script>
 <script type="module" src="app.js"></script></body></html>

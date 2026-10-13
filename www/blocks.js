@@ -77,7 +77,7 @@ const DEFAULT_WS = { variables: [{ name: 'creep', id: 'vc' }, { name: 'enemySpaw
     blk('variables_set', { VAR: { id: 've' } }, { VALUE: val_(blk('arena_first', null, { L: val_(blk('arena_objects', { F: 'enemy', P: 'StructureSpawn' })) })) },
       blk('controls_forEach', { VAR: { id: 'vc' } }, { LIST: val_(blk('arena_objects', { F: 'my', P: 'Creep' })), DO: { block: blk('arena_act_or_move', { A: 'attack' }, { C: val_(varGet('vc')), T: val_(varGet('ve')) }) } }))), x: 20, y: 20 }] } };
 const THEME = Blockly.Theme.defineTheme('arena-dark', { name: 'arena-dark', base: Blockly.Themes.Classic,
-  componentStyles: { workspaceBackgroundColour: '#1e1f24', toolboxBackgroundColour: '#25272d', toolboxForegroundColour: '#e6e6e6', flyoutBackgroundColour: '#25272d', flyoutForegroundColour: '#e6e6e6', flyoutOpacity: 1, scrollbarColour: '#555', scrollbarOpacity: 0.6, insertionMarkerColour: '#ffffff', insertionMarkerOpacity: 0.3, cursorColour: '#d0d0d0' } });
+  componentStyles: { workspaceBackgroundColour: '#1C2533', toolboxBackgroundColour: '#222c3c', toolboxForegroundColour: '#e6e6e6', flyoutBackgroundColour: '#222c3c', flyoutForegroundColour: '#e6e6e6', flyoutOpacity: 1, scrollbarColour: '#555', scrollbarOpacity: 0.6, insertionMarkerColour: '#ffffff', insertionMarkerOpacity: 0.3, cursorColour: '#d0d0d0' } });
 
 // 交互沿用 screeps-blockly-mobile：顶部分类 chips → 全宽积木列表（按最宽积木缩放、竖向滚动）；点按 = 添加到可见区域；长按 = 拖出
 window.ArenaBlocks = {
@@ -85,7 +85,7 @@ window.ArenaBlocks = {
   create(div, saved, onChange) {
     const ws = Blockly.inject(div, { toolbox: { kind: 'flyoutToolbox', contents: [] }, trashcan: false, renderer: 'zelos', theme: THEME,
       zoom: { controls: false, wheel: true, pinch: true, startScale: 0.8, minScale: 0.4, maxScale: 2 }, move: { scrollbars: true, drag: true, wheel: true },
-      grid: { spacing: 24, length: 2, colour: '#34363d', snap: true } });
+      grid: { spacing: 24, length: 2, colour: '#2c3748', snap: true } });
     if (saved) { try { Blockly.serialization.workspaces.load(saved, ws); } catch (e) { ws.clear(); } } // 默认空白工作区（无内置程序）
     const fly = ws.getFlyout(); let flyScale = 0.8, lpArmed = false;
     fly.getFlyoutScale = () => flyScale;
@@ -94,6 +94,7 @@ window.ArenaBlocks = {
       if (W > 0 && this.width_ !== W) { this.width_ = W; this.setBackgroundPath(W, this.height_ || 0); this.position(); ws.resize(); } };
     fly.dragAngleRange_ = 0; fly.isScrollable = () => true; fly.wouldDelete = () => false;
     fly.getClientRect = (orig => function () { return this.isVisible() ? orig.call(this) : null; })(fly.getClientRect);
+    fly.getWidth = (orig => function () { return this.isVisible() ? orig.call(this) : 0; })(fly.getWidth); // 隐藏时不占工作区左侧空间
     let lpT = null, lp0 = null;
     div.addEventListener('pointerdown', e => { if (!fly.isVisible() || !e.target.closest('.blocklyFlyout .blocklyDraggable')) return; lp0 = [e.clientX, e.clientY];
       clearTimeout(lpT); lpT = setTimeout(() => { fly.dragAngleRange_ = 180; lpArmed = true; navigator.vibrate && navigator.vibrate(20); }, 380); }, true);
@@ -109,8 +110,8 @@ window.ArenaBlocks = {
     });
     fly.getWorkspace().addChangeListener(e => { if (e.type !== Blockly.Events.CLICK || !e.blockId || !fly.isVisible()) return; setTimeout(() => {
       const src = fly.getWorkspace().getBlockById(e.blockId)?.getRootBlock(); if (!src) return; const st = Blockly.serialization.blocks.save(src, { addCoordinates: false });
-      const m = ws.getMetricsManager().getViewMetrics(true); const nb = Blockly.serialization.blocks.append(st, ws);
-      const n = ws.getTopBlocks(false).length; nb.moveBy(m.left + 24 + (n % 4) * 16, m.top + 24 + (n % 6) * 28); close(); }, 0); });
+      close(); const sc = ws.scale, el = ws.getParentSvg().getBoundingClientRect(), ox = ws.scrollX, oy = ws.scrollY; const nb = Blockly.serialization.blocks.append(st, ws);
+      const n = ws.getTopBlocks(false).length; setTimeout(() => { const el = ws.getParentSvg().getBoundingClientRect(), r = nb.getSvgRoot().getBoundingClientRect(); nb.moveBy((el.left + 24 + (n % 4) * 16 - r.left) / ws.scale, (el.top + 24 + (n % 6) * 28 - r.top) / ws.scale); }, 80); }, 0); });
     Object.assign(api, {
       openCat(id) {
         const c = CATS.find(c => c.id === id); if (!c) return;
