@@ -4,7 +4,7 @@ import { HostSession, ClientSession, nativeTransport, LAN_PORT } from './src/net
 import * as K from './src/constants.js';
 import { PROTOTYPES } from './src/engine/prototypes.js';
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
-const BOTS = { 'rush（近战冲锋）': 'bots/rush.mjs', 'kite（远程风筝）': 'bots/kite.mjs', 'ctf（夺旗）': 'bots/ctf.mjs', '空白模板': null };
+const BOTS = { 'rush（近战冲锋）': 'bots/rush.mjs', 'kite（远程风筝）': 'bots/kite.mjs', 'ctf（夺旗）': 'bots/ctf.mjs', 'collect（收集与控制）': 'bots/collect.mjs', 'construct（建造与控制）': 'bots/construct.mjs', 'portal（传送门）': 'bots/portal.mjs', 'power（力量分割）': 'bots/power.mjs', 'pain（痛与得）': 'bots/pain.mjs', 'escort（护送）': 'bots/escort.mjs', '空白模板': null };
 const BLANK = `import { getObjectsByPrototype } from 'game/utils';\nimport { Creep, StructureSpawn } from 'game/prototypes';\nimport { MOVE, ATTACK, ERR_NOT_IN_RANGE } from 'game/constants';\n\nexport function loop() {\n  const spawn = getObjectsByPrototype(StructureSpawn).find(s => s.my);\n  \n}\n`;
 $('#ver').textContent = 'v' + (window.APP_VERSION || 'dev');
 

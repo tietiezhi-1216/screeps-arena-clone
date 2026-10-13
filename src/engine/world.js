@@ -59,7 +59,7 @@ export class World {
       },
       findPath,
       createConstructionSite: (pos, proto) => {
-        if (!proto || !(proto.name in C.CONSTRUCTION_COST)) return { error: C.ERR_INVALID_ARGS };
+        if (!proto || !(proto.name in C.CONSTRUCTION_COST || proto.name in (w.extraConstruction || {}))) return { error: C.ERR_INVALID_ARGS };
         if (pos.x <= 0 || pos.y <= 0 || pos.x >= W - 1 || pos.y >= H - 1) return { error: C.ERR_INVALID_ARGS };
         if (w.terrainAt(pos.x, pos.y) === C.TERRAIN_WALL && proto !== P.StructureRoad) return { error: C.ERR_INVALID_TARGET };
         if (w.at(pos.x, pos.y).some(o => o instanceof P.ConstructionSite || (o instanceof P.Structure && o.constructor === proto))) return { error: C.ERR_INVALID_TARGET };
@@ -95,26 +95,26 @@ export class World {
       .sort((a, b) => (a[0].id < b[0].id ? -1 : a[0].id > b[0].id ? 1 : 0));
     // 1 战斗
     for (const [o, m] of I) {
-      if (m.attack) { const t = get(m.attack.target); if (t && range(o, t) <= 1) { o._k = 'melee'; if (t instanceof P.ConstructionSite) { this.remove(t); this.events.push({ t: 'atk', f: [o.x, o.y], to: [t.x, t.y], k: 'melee' }); } else this._damage(this._redirect(t, o._owner), o._parts(C.ATTACK) * C.ATTACK_POWER, o); } }
+      if (m.attack) { const t = get(m.attack.target); if (t && range(o, t) <= 1) { o._k = 'melee'; if (t instanceof P.ConstructionSite) { this.remove(t); this.events.push({ t: 'atk', f: [o.x, o.y], to: [t.x, t.y], k: 'melee' }); } else this._damage(this._redirect(t, o._owner), Math.round(P.effVal(o, [C.EFF_ATTACK_BOOST, C.EFF_ATTACK_MODIFIER], o._parts(C.ATTACK) * C.ATTACK_POWER)), o); } }
       if (m.ranged) {
-        o._k = 'ranged'; const pw = o._parts(C.RANGED_ATTACK) * C.RANGED_ATTACK_POWER;
-        if (m.ranged.kind === 'single') { const t = get(m.ranged.target); if (t && range(o, t) <= 3) this._damage(this._redirect(t, o._owner), pw, o); }
+        o._k = 'ranged'; const pw = P.effVal(o, [C.EFF_RANGED_ATTACK_BOOST, C.EFF_RANGED_ATTACK_MODIFIER], o._parts(C.RANGED_ATTACK) * C.RANGED_ATTACK_POWER);
+        if (m.ranged.kind === 'single') { const t = get(m.ranged.target); if (t && range(o, t) <= 3) this._damage(this._redirect(t, o._owner), Math.round(pw), o); }
         else for (const t of this.all()) { if (t._owner == null || t._owner === o._owner || t.hits === undefined || t instanceof P.ConstructionSite) continue; const r = range(o, t); if (r <= 3) this._damage(this._redirect(t, o._owner), Math.round(pw * C.RANGED_ATTACK_DISTANCE_RATE[r]), r ? null : o); }
       }
-      if (m.heal) { const t = get(m.heal.target); if (t) { heal.set(t, (heal.get(t) || 0) + o._parts(C.HEAL) * m.heal.power); this.events.push({ t: 'heal', f: [o.x, o.y], to: [t.x, t.y] }); } }
+      if (m.heal) { const t = get(m.heal.target); if (t) { heal.set(t, (heal.get(t) || 0) + Math.round(P.effVal(o, [C.EFF_HEAL_BOOST, C.EFF_HEAL_MODIFIER], o._parts(C.HEAL) * m.heal.power))); this.events.push({ t: 'heal', f: [o.x, o.y], to: [t.x, t.y] }); } }
       if (m.tower && o.store.energy >= C.TOWER_ENERGY_COST && !o.cooldown) {
         const t = get(m.tower.target); if (t) { const r = Math.max(range(o, t), C.TOWER_OPTIMAL_RANGE); o.store.energy -= C.TOWER_ENERGY_COST; o.cooldown = C.TOWER_COOLDOWN;
           if (m.tower.kind === 'attack') { o._k = 'tower'; this._damage(this._redirect(t, o._owner), Math.max(0, C.TOWER_POWER_ATTACK - 50 * (r - 1)), o); }
           else { heal.set(t, (heal.get(t) || 0) + Math.max(0, C.TOWER_POWER_HEAL - 30 * (r - 1))); this.events.push({ t: 'heal', f: [o.x, o.y], to: [t.x, t.y] }); } }
       }
     }
-    for (const [t, ds] of this._dmg) { const d = ds.reduce((a, b) => a + b, 0); if (t instanceof P.Creep) this._applyCreepDamage(t, d); else t.hits -= d; }
+    for (const [t, ds] of this._dmg) { const d = Math.max(0, Math.round(P.effVal(t, C.EFF_DAMAGE_TAKEN_MODIFIER, ds.reduce((a, b) => a + b, 0)))); if (t instanceof P.Creep) this._applyCreepDamage(t, d); else t.hits -= d; }
     for (const [t, h] of heal) if (t.exists && t instanceof P.Creep) this._healCreep(t, h);
     // 2 经济
     for (const [o, m] of I) {
       if (!o.exists) continue;
-      if (m.harvest) { const s = get(m.harvest.target); if (s && s.energy > 0) { const n = Math.min(s.energy, o._parts(C.WORK) * C.HARVEST_POWER); s.energy -= n; const free = Math.max(0, o.store.getFreeCapacity()); const into = Math.min(n, free); o.store.energy = (o.store.energy || 0) + into; if (n > into) this._drop(o, n - into); } }
-      if (m.build) { const s = get(m.build.target); if (s && s.exists) { const n = Math.min(o.store.energy || 0, o._parts(C.WORK) * C.BUILD_POWER, s.progressTotal - s.progress); s.progress += n; o.store.energy -= n;
+      if (m.harvest) { const s = get(m.harvest.target); if (s && s.energy > 0) { const n = Math.min(s.energy, Math.floor(P.effVal(o, C.EFF_WORK_BOOST, o._parts(C.WORK) * C.HARVEST_POWER))); s.energy -= n; const free = Math.max(0, o.store.getFreeCapacity()); const into = Math.min(n, free); o.store.energy = (o.store.energy || 0) + into; if (n > into) this._drop(o, n - into); } }
+      if (m.build) { const s = get(m.build.target); if (s && s.exists) { const n = Math.min(o.store.energy || 0, Math.floor(P.effVal(o, [C.EFF_WORK_BOOST, C.EFF_CONSTRUCTION_BOOST], o._parts(C.WORK) * C.BUILD_POWER)), s.progressTotal - s.progress); s.progress += n; o.store.energy -= n;
         if (s.progress >= s.progressTotal) { this.remove(s); const blocked = isObstacle({ constructor: s._proto }) && this.at(s.x, s.y).some(c => c instanceof P.Creep); if (!blocked) { const st = new s._proto(this, s.x, s.y, s._owner); this.add(st); } } } }
       if (m.withdraw) { const t = get(m.withdraw.target); if (t) { const n = Math.min(m.withdraw.amt, t.store[m.withdraw.r] || 0, o.store.getFreeCapacity()); t.store[m.withdraw.r] -= n; o.store[m.withdraw.r] = (o.store[m.withdraw.r] || 0) + n; } }
       if (m.transfer) { const t = get(m.transfer.target); if (t && t._acceptsTransfer) { const n = Math.min(m.transfer.amt, o.store[m.transfer.r] || 0); if (n > 0 && m.transfer.r === t.resourceType) { o.store[m.transfer.r] -= n; t._scores[o._owner] = (t._scores[o._owner] || 0) + n; t._owner = o._owner; t._lastBy = o._owner; } } else if (t) { const r = m.transfer.r, n = Math.min(m.transfer.amt, o.store[r] || 0, Math.max(0, t.store.getFreeCapacity(r))); o.store[r] -= n; t.store[r] = (t.store[r] || 0) + n; } }
@@ -137,7 +137,7 @@ export class World {
     for (const o of this.all()) {
       if (o.hits !== undefined && o.hits <= 0) { this.events.push({ t: 'die', at: [o.x, o.y] }); if (o.store && o.store.energy && !(o instanceof P.StructureSpawn)) this._drop(o, o.store.energy); this.remove(o); continue; }
       if (o instanceof P.StructureTower && o.cooldown > 0) o.cooldown--;
-      if (o instanceof P.Creep) o.fatigue = Math.max(0, o.fatigue - 2 * o._parts(C.MOVE));
+      if (o instanceof P.Creep) o.fatigue = Math.max(0, o.fatigue - Math.floor(P.effVal(o, C.EFF_MOVE_BOOST, 2 * o._parts(C.MOVE))));
       if (o instanceof P.Source && o.energy < o.energyCapacity) o.energy = Math.min(o.energyCapacity, o.energy + C.SOURCE_ENERGY_REGEN);
       // 官方 changelog：Spawns slowly regenerate energy (1 per tick)
       if (o instanceof P.StructureSpawn && (o.store.energy || 0) < C.SPAWN_ENERGY_CAPACITY)
@@ -154,6 +154,12 @@ export class World {
         const free = Math.max(0, ct.store.getFreeCapacity()); if (!free) break;
         const n = Math.min(r.amount, free); ct.store.energy = (ct.store.energy || 0) + n; r.amount -= n; if (r.amount <= 0) this.remove(r);
       }
+    }
+    // 效果：EFF_HITS_LOSS（每 tick 掉血 = effVal(0)），过期清理
+    for (const o of this.all()) {
+      if (!o._effects || !o._effects.length) continue;
+      if (o instanceof P.Creep) { const loss = Math.round(P.effVal(o, C.EFF_HITS_LOSS, 0)); if (loss > 0) { this._applyCreepDamage(o, loss); if (o.hits <= 0) { this.events.push({ t: 'die', at: [o.x, o.y] }); this.remove(o); continue; } } }
+      o._effects = o._effects.filter(e => e.endTime == null || e.endTime > this.tick);
     }
     this.intents.clear();
     for (const r of this.rules) r(this);
@@ -221,7 +227,7 @@ export class World {
     });
     for (const [c, d] of applied) {
       const cost = this._moveCost(c, d.x, d.y); c.x = d.x; c.y = d.y;
-      if (d.pulledBy) d.pulledBy.fatigue += cost; else c.fatigue += cost;
+      { const fo = d.pulledBy || c; fo.fatigue += Math.max(0, Math.round(P.effVal(fo, [C.EFF_FATIGUE_MODIFIER, 'slowdown'], cost))); }
       const road = this.at(c.x, c.y).find(o => o instanceof P.StructureRoad); if (road) { road.hits -= C.ROAD_WEAROUT * c.body.length; }
     }
   }
@@ -229,7 +235,10 @@ export class World {
   snapshot() {
     const objs = [];
     for (const o of this.objects.values()) {
-      const s = { id: o.id, t: o.constructor.name, x: o.x, y: o.y };
+      const s = { id: o.id, t: o instanceof P.EscortCreep ? 'Creep' : (o instanceof P.BonusFlag || o instanceof P.ScoreFlag) ? 'Flag' : o.constructor.name, x: o.x, y: o.y };
+      if (o instanceof P.EscortCreep) s.esc = 1; if (o instanceof P.BonusFlag) s.bt = o.bonusType; if (o instanceof P.ScoreFlag) s.spt = o.scorePerTick;
+      if (o instanceof P.AreaEffect || o instanceof P.EffectZone) { s.ef = o.effect; if (o._r) s.r = o._r; } if (o instanceof P.Portal) s.d = [o.destination.x, o.destination.y];
+      if (o._effects && o._effects.length) s.fx = o._effects.map(e => e.effectType);
       if (o._owner != null) s.o = o._owner; if (o.hits !== undefined) { s.h = o.hits; s.hm = o.hitsMax; }
       if (o.store) { s.e = o.store.energy || 0; s.c = o.store._cap; }
       if (o instanceof P.Creep) { s.b = o.body.map(p => p.type[0] + (p.hits > 0 ? '' : '!')).join(','); if (o.spawning) s.sp = 1; s.f = o.fatigue; }
@@ -241,6 +250,6 @@ export class World {
       if (o instanceof P.StructureSpawn && o.spawning) s.spn = [o.spawning.needTime - o.spawning.remainingTime, o.spawning.needTime];
       objs.push(s);
     }
-    return { tick: this.tick, objs, ev: this.events, vis: this.visuals, log: this.logs, cpu: this.cpu, result: this.result };
+    return { tick: this.tick, score: this.score ? { ...this.score } : undefined, objs, ev: this.events, vis: this.visuals, log: this.logs, cpu: this.cpu, result: this.result };
   }
 }

@@ -15,12 +15,17 @@ export function drawFrame(g, terrainC, f, prev, k = 1, sel) {
   g.drawImage(terrainC, 0, 0);
   const pm = prev ? new Map(prev.objs.map(o => [o.id, o])) : new Map();
   const pos = o => { const p = pm.get(o.id); if (!p || o.t !== 'Creep') return [cx(o.x), cx(o.y)]; return [cx(p.x + (o.x - p.x) * k), cx(p.y + (o.y - p.y) * k)]; };
-  const order = ['StructureRoad', 'BodyPart', 'Flag', 'ConstructionSite', 'Resource', 'Source', 'StructureContainer', 'StructureExtension', 'StructureWall', 'StructureSpawn', 'StructureTower', 'Creep', 'StructureRampart', 'ScoreCollector'];
+  const order = ['EffectZone', 'AreaEffect', 'Portal', 'ConstructionBoost', 'StructureGoal', 'StructureRoad', 'BodyPart', 'Flag', 'ConstructionSite', 'Resource', 'Source', 'StructureContainer', 'StructureExtension', 'StructureWall', 'StructureSpawn', 'StructureTower', 'Creep', 'StructureRampart', 'ScoreCollector'];
   const objs = [...f.objs].sort((a, b) => order.indexOf(a.t) - order.indexOf(b.t));
   for (const o of objs) {
     const [x, y] = pos(o), col = COLORS[o.o] || COLORS.neutral;
     switch (o.t) {
       case 'StructureRoad': g.fillStyle = '#555'; g.beginPath(); g.arc(x, y, 1.5, 0, 7); g.fill(); break;
+      case 'EffectZone': { const rr = cx(o.x + o.r + 0.5) - cx(o.x - o.r - 0.5); g.globalAlpha = .18; g.fillStyle = o.ef === 'freeze' ? '#6cf' : o.ef === 'heal' ? '#6f6' : '#f55'; g.fillRect(x - rr / 2, y - rr / 2, rr, rr); g.globalAlpha = 1; break; }
+      case 'AreaEffect': g.globalAlpha = .35; g.fillStyle = '#58f'; g.fillRect(x - 4, y - 4, 8, 8); g.globalAlpha = 1; break;
+      case 'Portal': g.strokeStyle = '#b6f'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, 4, 0, 7); g.stroke(); g.beginPath(); g.arc(x, y, 2, 0, 7); g.stroke(); break;
+      case 'ConstructionBoost': g.fillStyle = '#fd4'; g.beginPath(); g.moveTo(x, y - 4); g.lineTo(x + 4, y + 3); g.lineTo(x - 4, y + 3); g.fill(); break;
+      case 'StructureGoal': g.fillStyle = col; g.strokeStyle = '#fff'; g.lineWidth = 1; g.fillRect(x - 4.5, y - 4.5, 9, 9); g.strokeRect(x - 4.5, y - 4.5, 9, 9); break;
       case 'ScoreCollector': g.strokeStyle = col || '#c9f'; g.lineWidth = 1.5; g.fillStyle = '#2a1838'; g.beginPath(); g.arc(x, y, 5, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#c9f'; g.beginPath(); g.arc(x, y, 2, 0, 7); g.fill(); break;
       case 'Resource': g.fillStyle = o.rt ? '#c9f' : COLORS.energy; g.beginPath(); g.arc(x, y, Math.min(3.5, 1 + Math.sqrt(o.e) / 8), 0, 7); g.fill(); break;
       case 'Source': g.fillStyle = '#4a4222'; g.fillRect(x - 3.5, y - 3.5, 7, 7); g.fillStyle = COLORS.energy; const s = 6 * o.e / o.c; g.fillRect(x - s / 2, y - s / 2, s, s); break;
@@ -41,6 +46,7 @@ export function drawFrame(g, terrainC, f, prev, k = 1, sel) {
         if (o.sp) break; const parts = o.b.split(','), n = parts.length;
         parts.forEach((p, i) => { g.strokeStyle = p.endsWith('!') ? '#333' : PART[p[0]]; g.lineWidth = 1.6; g.beginPath(); const a0 = -Math.PI / 2 + i * 2 * Math.PI / n; g.arc(x, y, 3.6, a0, a0 + 2 * Math.PI / n - 0.08); g.stroke(); });
         g.fillStyle = col; g.beginPath(); g.arc(x, y, 2.4, 0, 7); g.fill();
+        if (o.esc) { g.strokeStyle = '#fd4'; g.lineWidth = 1; g.beginPath(); g.arc(x, y, 5.2, 0, 7); g.stroke(); }
         if (o.e) { g.fillStyle = COLORS.energy; g.beginPath(); g.arc(x, y, 1.2, 0, 7); g.fill(); }
         if (o.h < o.hm) hpBar(g, x, y - 6, o.h / o.hm, col); break; }
     }

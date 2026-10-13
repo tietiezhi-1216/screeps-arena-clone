@@ -28,7 +28,13 @@ export class GameObject {
   get controlledBy() { return this._controlledBy || undefined; }
   get ticksToDecay() { return undefined; }
   /** 官方 GameObject.effects：Effect[]（{effect, ticksRemaining}）；无效果时为 undefined */
-  get effects() { return this._effects && this._effects.length ? this._effects.map(e => ({ ...e })) : undefined; }
+  get effects() { return this._effects && this._effects.length ? this._effects.map(e => ({ effectType: e.effectType, data: { ...e.data }, ...(e.endTime != null ? { endTime: e.endTime } : {}) })) : undefined; }
+  /** 引擎内部：添加效果 {effectType, data:{multiplier, offset}, endTime}；同类型同来源(key)覆盖 */
+  _addEffect(effectType, data = {}, endTime, key = effectType) {
+    if (!this._effects) Object.defineProperty(this, '_effects', { value: [], writable: true });
+    this._effects = this._effects.filter(e => e._key !== key);
+    const e = { effectType, data, endTime }; Object.defineProperty(e, '_key', { value: key }); this._effects.push(e); return e;
+  }
   getRangeTo(p) { return range(this, p); }
   findClosestByRange(ps) { return this._w.utils.findClosestByRange(this, ps); }
   findClosestByPath(ps, o) { return this._w.utils.findClosestByPath(this, ps, o); }
@@ -46,7 +52,7 @@ export class BodyPart extends GameObject {
   get ticksToDecay() { return this._decayAt - this._w.tick; }
 }
 export class ConstructionSite extends GameObject {
-  constructor(w, x, y, proto, owner) { super(w, x, y); Object.defineProperty(this, '_owner', { value: owner }); this._proto = proto; this.progress = 0; this.progressTotal = C.CONSTRUCTION_COST[proto.name]; this.structure = undefined; }
+  constructor(w, x, y, proto, owner) { super(w, x, y); Object.defineProperty(this, '_owner', { value: owner }); this._proto = proto; this.progress = 0; this.progressTotal = C.CONSTRUCTION_COST[proto.name] ?? w.extraConstruction?.[proto.name]; this.structure = undefined; }
   get my() { return this._owner === this._w.current; }
   remove() { if (!this.my) return ERR_NOT_OWNER; this._w.remove(this); return OK; }
 }
@@ -177,5 +183,34 @@ export class ScoreCollector extends GameObject {
   get my() { return this._owner == null ? undefined : this._owner === this._w.current; }
   get score() { return this._owner == null ? 0 : (this._scores[this._owner] || 0); }
 }
-export const TYPE_NAME = new Map([[Creep, 'creep'], [StructureTower, 'tower'], [StructureWall, 'constructedWall'], [StructureSpawn, 'spawn'], [StructureExtension, 'extension'], [StructureRampart, 'rampart'], [StructureRoad, 'road'], [StructureContainer, 'container']]);
+/** 官方 Effect 公式：value = base * (multiplier ?? 1) + (offset ?? 0)，依次作用于所有同类型效果 */
+// ---- 赛季 arena 原型（字段严格按 arena-definitions typings）----
+const ro = (o, k, v) => Object.defineProperty(o, k, { value: v, enumerable: true });
+const hid = (o, k, v) => Object.defineProperty(o, k, { value: v, writable: true });
+/** season_1/2 construct_and_control：对同格所有 creep 施加 effect */
+export class AreaEffect extends GameObject { constructor(w, x, y, effect) { super(w, x, y); ro(this, 'effect', effect); } }
+/** construct_and_control：踩上后获得 200 tick 建造加成；ticksToDecay 到 0 消失 */
+export class ConstructionBoost extends GameObject {
+  constructor(w, x, y, life) { super(w, x, y); hid(this, '_decayAt', w.tick + life); }
+  get ticksToDecay() { return Math.max(0, this._decayAt - this._w.tick); }
+}
+/** construct_and_control：建成即获胜的建筑 */
+export class StructureGoal extends GameObject { constructor(w, x, y, owner) { super(w, x, y); hid(this, '_owner', owner ?? null); } get my() { return this._owner == null ? undefined : this._owner === this._w.current; } }
+/** portal_exploration：传送门 */
+export class Portal extends GameObject { constructor(w, x, y, destination) { super(w, x, y); ro(this, 'destination', Object.freeze({ x: destination.x, y: destination.y })); } }
+/** power_split：占领后给己方所有 creep 的 bonusType 部件加成 */
+export class BonusFlag extends Flag { constructor(w, x, y, bonusType) { super(w, x, y, null); ro(this, 'bonusType', bonusType); } }
+/** pain_and_gain：瞬间占领，每 tick 给分并对占领者施加全局 debuff */
+export class ScoreFlag extends Flag { constructor(w, x, y, effectType, scorePerTick) { super(w, x, y, null); ro(this, 'effectType', effectType); ro(this, 'scorePerTick', scorePerTick); } }
+/** escort_run：开局即在场、需护送到终点的 creep */
+export class EscortCreep extends Creep {}
+/** collect_and_control 区域（EFFECT_FREEZE/HEAL/DAMAGE）。官方 C&C typings 未导出该原型，仅为引擎内部对象 */
+export class EffectZone extends GameObject { constructor(w, x, y, effect, radius) { super(w, x, y); ro(this, 'effect', effect); hid(this, '_r', radius); } }
+
+export function effVal(o, types, base) {
+  if (!o || !o._effects) return base; const ts = Array.isArray(types) ? types : [types]; let v = base;
+  for (const e of o._effects) if (ts.includes(e.effectType) && (e.endTime == null || e.endTime >= o._w.tick)) v = v * (e.data?.multiplier ?? 1) + (e.data?.offset ?? 0);
+  return v;
+}
+export const TYPE_NAME = new Map([[Creep, 'creep'], [EscortCreep, 'creep'], [StructureTower, 'tower'], [StructureWall, 'constructedWall'], [StructureSpawn, 'spawn'], [StructureExtension, 'extension'], [StructureRampart, 'rampart'], [StructureRoad, 'road'], [StructureContainer, 'container']]);
 export const PROTOTYPES = { GameObject, Creep, Structure, OwnedStructure, StructureSpawn, StructureTower, StructureContainer, StructureExtension, StructureRampart, StructureRoad, StructureWall, Source, Resource, ConstructionSite, Flag, Store, Spawning };
