@@ -3,6 +3,9 @@
 // 客户端 → 房主：join{pid,name,code} · code{code} · ready{}
 // 房主 → 客户端：welcome{pid,slot} · lobby{players} · start{meta,terrain,first} · tick{f} · end{result} · log{s}
 export const LAN_PORT = 8797;
+// 建造规划：[{dx,dy,type}]（相对己方 Spawn，x 方向按“朝向敌方”为正），最多 10 个工地
+export const PLAN_TYPES = ['StructureWall', 'StructureRampart', 'StructureRoad', 'StructureContainer', 'StructureExtension', 'StructureTower'];
+export function sanitizePlan(p) { return Array.isArray(p) ? p.slice(0, 10).filter(o => o && PLAN_TYPES.includes(o.type) && Number.isInteger(o.dx) && Number.isInteger(o.dy) && Math.abs(o.dx) < 100 && Math.abs(o.dy) < 100).map(o => ({ dx: o.dx, dy: o.dy, type: o.type })) : []; }
 export class HostSession {
   constructor(transport, { name = '房主' } = {}) {
     this.t = transport; this.name = name; this.clients = new Map(); this.guest = null; this.onLobby = null; this.started = false;
@@ -13,12 +16,13 @@ export class HostSession {
   handle(id, m) {
     const c = this.clients.get(id); if (!c) return;
     if (m.t === 'join') {
-      c.pid = String(m.pid || 'guest' + id).slice(0, 40); c.name = String(m.name || '玩家').slice(0, 16); c.code = typeof m.code === 'string' ? m.code.slice(0, 200000) : '';
+      c.pid = String(m.pid || 'guest' + id).slice(0, 40); c.name = String(m.name || '玩家').slice(0, 16); c.code = typeof m.code === 'string' ? m.code.slice(0, 200000) : ''; c.plan = sanitizePlan(m.plan);
       const slot = this.guest == null && !this.started ? (this.guest = id, 'p2') : 'spectator';
       this.send(id, { t: 'welcome', pid: c.pid, slot }); this.lobby();
       if (this.started && this.startMsg) this.send(id, this.startMsg);
-    } else if (m.t === 'code' && c.pid) { c.code = String(m.code || '').slice(0, 200000); this.lobby(); }
+    } else if (m.t === 'code' && c.pid) { c.code = String(m.code || '').slice(0, 200000); c.plan = sanitizePlan(m.plan); this.lobby(); }
   }
+  guestPlan() { return this.guest != null ? this.clients.get(this.guest)?.plan || [] : []; }
   guestCode() { return this.guest != null ? this.clients.get(this.guest)?.code || '' : null; }
   players() { return [{ name: this.name, slot: 'p1' }, ...[...this.clients.entries()].filter(([, c]) => c.pid).map(([id, c]) => ({ name: c.name, slot: id === this.guest ? 'p2' : 'spectator', hasCode: !!c.code }))]; }
   lobby() { const players = this.players(); this.t.broadcast(JSON.stringify({ t: 'lobby', players })); this.onLobby?.(players); }
@@ -28,10 +32,10 @@ export class HostSession {
   end(result) { this.started = false; this.t.broadcast(JSON.stringify({ t: 'end', result })); }
 }
 export class ClientSession {
-  constructor(url, { pid, name, code, WS = globalThis.WebSocket } = {}) {
-    this.code = code || ''; this.onStart = this.onTick = this.onEnd = this.onLobby = this.onStatus = null;
+  constructor(url, { pid, name, code, plan, WS = globalThis.WebSocket } = {}) {
+    this.code = code || ''; this.plan = plan || []; this.onStart = this.onTick = this.onEnd = this.onLobby = this.onStatus = null;
     const ws = this.ws = new WS(url);
-    ws.onopen = () => { ws.send(JSON.stringify({ t: 'join', pid, name, code: this.code })); this.onStatus?.('已连接'); };
+    ws.onopen = () => { ws.send(JSON.stringify({ t: 'join', pid, name, code: this.code, plan: this.plan })); this.onStatus?.('已连接'); };
     ws.onclose = () => this.onStatus?.('连接断开'); ws.onerror = () => this.onStatus?.('连接失败');
     ws.onmessage = ev => { let m; try { m = JSON.parse(typeof ev.data === 'string' ? ev.data : ev.data.toString()); } catch (e) { return; } this.handle(m); };
   }
@@ -42,7 +46,7 @@ export class ClientSession {
     else if (m.t === 'tick') this.onTick?.(m.f);
     else if (m.t === 'end') this.onEnd?.(m.result);
   }
-  sendCode(code) { this.code = code; if (this.ws.readyState === 1) this.ws.send(JSON.stringify({ t: 'code', code })); }
+  sendCode(code, plan = this.plan) { this.code = code; this.plan = plan; if (this.ws.readyState === 1) this.ws.send(JSON.stringify({ t: 'code', code, plan })); }
   close() { try { this.ws.close(); } catch (e) {} }
 }
 // 内存传输（测试/单机调试）：返回 { host transport, connect() → 客户端 WebSocket 替身 }

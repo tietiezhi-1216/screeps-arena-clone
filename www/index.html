@@ -1,44 +1,50 @@
 <!doctype html><html lang="zh"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#15171b"><title>Screeps Arena</title><link rel="icon" href="icon.svg"><link rel="stylesheet" href="style.css"></head><body>
-<div id="app">
- <header><img src="icon.svg" class="logo"><b>SCREEPS</b><span class="arena">ARENA</span><span id="status"></span><button id="runTop" class="run">▶ 对局</button></header>
- <main>
-  <section id="v-play" class="view on">
-   <canvas id="cv"></canvas>
-   <div class="hud"><div class="pl p1"><i></i><em id="p1info">—</em></div><div class="tick" id="tick">0</div><div class="pl p2"><em id="p2info">—</em><i></i></div></div>
-   <div id="result"></div>
-   <div id="empty">点 <b>▶ 对局</b> 用两边的脚本开一局<br><small>双指缩放 · 单指拖动 · 点对象查看详情</small></div>
-   <div class="fab"><button id="fit" title="适配">⤢</button><button id="conBtn" title="控制台">≡</button></div>
-   <div id="sheet" class="sheet"><div class="grab"></div><div class="sheet-tabs"><button data-s="inspect" class="on">对象</button><button data-s="p1">P1 控制台</button><button data-s="p2">P2 控制台</button><button id="sheetClose">✕</button></div><pre id="sheetBody"></pre></div>
-   <div class="controls"><button id="play" class="big">▶</button><button id="step">⏭</button><input id="scrub" type="range" min="0" max="0" value="0"><button id="speed">1×</button></div>
-  </section>
-  <section id="v-code" class="view">
-   <div class="code-top"><div class="seg"><button data-p="0" class="on"><i class="dot p1"></i>玩家 1</button><button data-p="1"><i class="dot p2"></i>玩家 2</button></div>
-    <div class="seg" id="edMode"><button data-m="text" class="on">文本</button><button data-m="blocks">积木</button></div><select id="tpl"><option value="" disabled selected hidden>模板…</option></select><button id="fsm">A−</button><button id="fsp">A+</button><button id="check">✓ 检查</button></div>
-   <div class="editor" id="textEd"><pre id="gutter"></pre><div class="ed-wrap"><pre id="hl" aria-hidden="true"></pre><textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea></div></div>
-   <div id="blocksEd" class="hidden"><div class="catbar" id="catbar"></div><div id="blocklyDiv"></div></div>
-   <div id="codeMsg"></div>
-   <div class="snips" id="snips"></div>
-   <div class="keys" id="keys"></div>
-  </section>
-  <section id="v-more" class="view"><div class="doc">
-   <h3>对局设置</h3><label>地图种子 <input id="seed" type="number" value="1"></label><label>模式 <select id="mode"><option value="spawn-and-swamp">Spawn and Swamp（基础）</option><option value="spawn-and-swamp-advanced">Spawn and Swamp（高级）</option><option value="capture-the-flag">Capture the Flag（基础）</option><option value="capture-the-flag-advanced">Capture the Flag（高级）</option><option value="collect-and-control">Collect and Control（基础）</option><option value="collect-and-control-advanced">Collect and Control（高级）</option><option value="construct-and-control">Construct and Control（S1）</option><option value="construct-and-control-s2">Construct and Control（S2）</option><option value="portal-exploration">Portal Exploration（S1）</option><option value="power-split">Power Split（S2 基础）</option><option value="power-split-advanced">Power Split（S2 高级）</option><option value="power-split-s3">Power Split（S3 基础）</option><option value="power-split-s3-advanced">Power Split（S3 高级）</option><option value="pain-and-gain">Pain and Gain（S4）</option><option value="escort-run">Escort Run（S3）</option><option value="escort-run-s4">Escort Run（S4）</option></select></label>
-   <h3>局域网联机</h3>
-   <p class="dim">同一 WiFi（或热点）下：一台开房当玩家 1，另一台加入当玩家 2，其余加入者观战。房主权威模拟，实时同步。</p>
-   <label>昵称 <input id="nick" maxlength="16" placeholder="玩家"></label>
-   <div class="row"><button id="hostBtn">🏠 开房</button><button id="findBtn">🔍 搜索房间</button></div>
-   <div class="row"><input id="ip" placeholder="房主 IP，如 192.168.1.5" style="flex:1"><button id="joinBtn">加入</button></div>
-   <div id="hosts" class="row"></div><pre id="lobby" class="dim"></pre>
-   <div class="row"><button id="lanStart" class="run hidden">▶ 开始联机对局</button><button id="lanSend" class="hidden">⇪ 发送我的代码</button><button id="lanLeave" class="hidden">断开</button></div>
-   <h3>回放</h3><div class="row"><button id="save">保存回放</button><button id="load">载入回放</button><input type="file" id="file" hidden accept=".json,application/json"></div>
-   <h3>应用</h3><div class="row"><button id="updBtn">检查更新</button><span id="ver"></span></div>
-   <h3>API 速查（对齐 arena.screeps.com/docs）</h3>
-   <p>脚本是 ES 模块，导出 <code>loop()</code>，每 tick 调用一次；可导入 <code>game/utils</code>、<code>game/prototypes</code>、<code>game/constants</code>、<code>game/path-finder</code>、<code>game/visual</code>、<code>game</code>。</p>
-   <p>CPU：每 tick <code>50 ms</code>，首 tick <code>1000 ms</code>；超时则该 tick 的指令全部作废。脚本无法访问网络、存储与全局对象，<code>eval</code>/<code>Function</code> 被禁用。</p>
-   <p class="dim">非官方项目，与 Screeps Arena 开发商无关。</p></div></section>
- </main>
- <nav class="tabs"><button data-v="play" class="on"><span>⚔</span>对局</button><button data-v="code"><span>{ }</span>代码</button><button data-v="more"><span>⋯</span>更多</button></nav>
+<meta name="theme-color" content="#0a0a0a"><title>Screeps Arena</title><link rel="icon" href="icon.svg"><link rel="stylesheet" href="style.css"></head><body>
+<canvas id="cv"></canvas>
+<div id="hud"><span class="chip pl p1"><i class="dot"></i><span id="p1info">P1</span></span><span class="chip" id="tick">0</span><span class="chip pl p2"><i class="dot"></i><span id="p2info">P2</span></span><span class="chip st" id="status"></span></div>
+<div id="result"></div>
+<div id="ctl" class="hidden"><button id="step" data-icon="player-track-next" class="iconbtn"></button><input id="scrub" type="range" min="0" max="0" value="0"></div>
+<div id="buildBar" class="hidden"><div id="bpList"></div><div class="row"><span id="bbMsg"></span><button id="bbClear" data-icon="eraser"><span class="lb">清空</span></button><button id="bbDone" data-icon="check" class="primary"><span class="lb">完成</span></button></div></div>
+<div id="sheet"><div class="pnHead"><div class="pnTabs"><button data-s="inspect" class="on">对象</button><button data-s="p1">P1 日志</button><button data-s="p2">P2 日志</button></div><button id="sheetClose" data-icon="x" class="iconbtn"></button></div><pre id="sheetBody"></pre></div>
+<nav id="bar">
+ <button id="btnRoom" data-icon="broadcast"><span class="lb">对战</span></button>
+ <button id="btnCode" data-icon="code"><span class="lb">代码</span></button>
+ <button id="btnBuild" data-icon="hammer"><span class="lb">建造</span></button>
+ <button id="play" data-icon="player-play"><span class="lb">播放</span></button>
+ <button id="speed" data-icon="gauge"><span class="lb">1x</span></button>
+ <button id="conBtn" data-icon="terminal-2"><span class="lb">日志</span></button>
+ <button id="btnMenu" data-icon="settings"><span class="lb">设置</span></button>
+</nav>
+<div id="editor" class="hidden">
+ <div id="edTabs"><div class="seg" id="edMode"><button data-m="text" class="on">文本</button><button data-m="blocks">积木</button></div><select id="tpl"><option value="" disabled selected hidden>模板</option></select><button id="fsm" class="iconbtn" data-icon="zoom-out"></button><button id="fsp" class="iconbtn" data-icon="zoom-in"></button><button id="check" class="iconbtn" data-icon="bug"></button><button id="edClose" data-icon="check" class="primary"><span class="lb">完成</span></button></div>
+ <div class="editor" id="textEd"><pre id="gutter"></pre><div class="ed-wrap"><pre id="hl" aria-hidden="true"></pre><textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea></div></div>
+ <div id="blocksEd" class="hidden"><div class="catbar" id="catbar"></div><div id="blocklyDiv"></div></div>
+ <div id="codeMsg"></div><div class="snips" id="snips"></div><div class="keys" id="keys"></div>
 </div>
-<script src="version.js"></script><script src="vendor/blockly_compressed.js"></script><script src="vendor/blocks_compressed.js"></script><script src="vendor/javascript_compressed.js"></script><script src="vendor/msg-zh.js"></script><script src="blocks.js"></script><script src="vendor/capacitor.js"></script><script src="update.js"></script>
+<div id="room" class="hidden panel">
+ <div class="pTitle">对战</div>
+ <div id="netStatus" class="status">未连接</div>
+ <input id="nick" placeholder="昵称" maxlength="16">
+ <div class="row"><select id="mode"></select></div>
+ <div class="row"><label class="lb muted" style="align-self:center">种子</label><input id="seed" type="number" value="1"></div>
+ <div class="row"><button id="hostBtn" data-icon="home" class="primary"><span class="lb">开房</span></button><button id="findBtn" data-icon="search"><span class="lb">搜索</span></button></div>
+ <div class="row"><input id="ip" placeholder="房主 IP"><button id="joinBtn" data-icon="login" class="narrow"><span class="lb">加入</span></button></div>
+ <div id="hosts"></div><div id="lobby"></div>
+ <div class="row"><button id="lanStart" data-icon="player-play" class="primary hidden"><span class="lb">开始对局</span></button><button id="lanSend" data-icon="upload" class="primary hidden"><span class="lb">提交代码</span></button><button id="lanLeave" data-icon="x" class="hidden"><span class="lb">断开</span></button></div>
+ <div class="sep"></div>
+ <div class="row"><select id="diff"><option value="easy">简单</option><option value="normal" selected>普通</option><option value="hard">困难</option></select><button id="runTop" data-icon="device-gamepad-2" class="primary narrow"><span class="lb">对战 AI</span></button></div>
+ <button id="roomClose" data-icon="x" class="ghost"><span class="lb">关闭</span></button>
+</div>
+<div id="menu" class="hidden panel">
+ <div class="pTitle">设置</div>
+ <button id="save" data-icon="device-floppy"><span class="lb">保存回放</span></button>
+ <button id="load" data-icon="file-import"><span class="lb">载入回放</span></button><input type="file" id="file" hidden accept=".json,application/json">
+ <button id="updBtn" data-icon="download"><span class="lb">检查更新</span></button>
+ <div id="ver" class="muted"></div>
+ <button id="mClose" data-icon="x" class="ghost"><span class="lb">关闭</span></button>
+</div>
+<div id="start"><div class="startTitle"><img src="icon.svg" class="logo"><div class="t1">SCREEPS ARENA</div></div>
+ <div class="startBtns"><button id="sNet" data-icon="broadcast" class="big primary"><span class="lb">局域网对战</span></button><button id="sPractice" data-icon="device-gamepad-2" class="big"><span class="lb">练习</span></button><button id="sCode" data-icon="code" class="big"><span class="lb">编写代码</span></button></div><div id="startVer" class="muted"></div></div>
+<script src="version.js"></script><script src="icons.js"></script><script src="vendor/blockly_compressed.js"></script><script src="vendor/blocks_compressed.js"></script><script src="vendor/javascript_compressed.js"></script><script src="vendor/msg-zh.js"></script><script src="blocks.js"></script><script src="vendor/capacitor.js"></script><script src="update.js"></script>
 <script type="module" src="app.js"></script></body></html>

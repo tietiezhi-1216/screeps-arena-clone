@@ -5,7 +5,7 @@ const PART = { m: '#a9b7c6', w: '#ffe56d', c: '#777777', a: '#f93842', r: '#5d80
 export function terrainCanvas(terrain) {
   const c = new OffscreenCanvas(N * TS, N * TS), g = c.getContext('2d');
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-    const t = terrain[y * N + x]; g.fillStyle = t === 1 ? '#111111' : t === 2 ? '#232c1c' : '#2b2b2b'; g.fillRect(x * TS, y * TS, TS, TS);
+    const t = terrain[y * N + x]; g.fillStyle = t === 1 ? '#0c0c0c' : t === 2 ? '#2c3a20' : '#3a3a3a'; g.fillRect(x * TS, y * TS, TS, TS); if (t === 1) { g.fillStyle = '#1e1e1e'; g.fillRect(x * TS + 1, y * TS + 1, TS - 2, TS - 2); }
   }
   g.strokeStyle = '#ffffff08'; for (let i = 0; i <= N; i += 10) { g.beginPath(); g.moveTo(i * TS, 0); g.lineTo(i * TS, N * TS); g.moveTo(0, i * TS); g.lineTo(N * TS, i * TS); g.stroke(); }
   return c;
@@ -29,7 +29,7 @@ export function drawFrame(g, terrainC, f, prev, k = 1, sel) {
       case 'ScoreCollector': g.strokeStyle = col || '#c9f'; g.lineWidth = 1.5; g.fillStyle = '#2a1838'; g.beginPath(); g.arc(x, y, 5, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#c9f'; g.beginPath(); g.arc(x, y, 2, 0, 7); g.fill(); break;
       case 'Resource': g.fillStyle = o.rt ? '#c9f' : COLORS.energy; g.beginPath(); g.arc(x, y, Math.min(3.5, 1 + Math.sqrt(o.e) / 8), 0, 7); g.fill(); break;
       case 'Source': g.fillStyle = '#4a4222'; g.fillRect(x - 3.5, y - 3.5, 7, 7); g.fillStyle = COLORS.energy; const s = 6 * o.e / o.c; g.fillRect(x - s / 2, y - s / 2, s, s); break;
-      case 'StructureContainer': g.fillStyle = '#181818'; g.strokeStyle = '#666'; g.lineWidth = 1; g.fillRect(x - 3, y - 3.5, 6, 7); g.strokeRect(x - 3, y - 3.5, 6, 7); g.fillStyle = COLORS.energy; { const h = 6 * o.e / o.c; g.fillRect(x - 2, y + 3 - h, 4, h); } break;
+      case 'StructureContainer': g.fillStyle = '#3d3d3d'; g.strokeStyle = '#bbb'; g.lineWidth = 1; g.fillRect(x - 3, y - 3.5, 6, 7); g.strokeRect(x - 3, y - 3.5, 6, 7); g.fillStyle = COLORS.energy; { const h = 6 * o.e / o.c; g.fillRect(x - 2, y + 3 - h, 4, h); } break;
       case 'StructureExtension': g.strokeStyle = col; g.fillStyle = '#181818'; g.beginPath(); g.arc(x, y, 3, 0, 7); g.fill(); g.stroke(); g.fillStyle = COLORS.energy; g.beginPath(); g.arc(x, y, 2 * o.e / o.c, 0, 7); g.fill(); break;
       case 'Flag': g.strokeStyle = '#ddd'; g.lineWidth = 1; g.beginPath(); g.moveTo(x - 2.5, y + 4); g.lineTo(x - 2.5, y - 4); g.stroke(); g.fillStyle = col; g.beginPath(); g.moveTo(x - 2.5, y - 4); g.lineTo(x + 4, y - 2); g.lineTo(x - 2.5, y); g.fill(); break;
       case 'BodyPart': g.fillStyle = PART[o.bt === 'ranged_attack' ? 'r' : o.bt[0]] || '#fff'; g.beginPath(); g.moveTo(x, y - 3); g.lineTo(x + 3, y); g.lineTo(x, y + 3); g.lineTo(x - 3, y); g.fill(); break;

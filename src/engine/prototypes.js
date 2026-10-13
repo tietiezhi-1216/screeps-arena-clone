@@ -213,4 +213,4 @@ export function effVal(o, types, base) {
   return v;
 }
 export const TYPE_NAME = new Map([[Creep, 'creep'], [EscortCreep, 'creep'], [StructureTower, 'tower'], [StructureWall, 'constructedWall'], [StructureSpawn, 'spawn'], [StructureExtension, 'extension'], [StructureRampart, 'rampart'], [StructureRoad, 'road'], [StructureContainer, 'container']]);
-export const PROTOTYPES = { GameObject, Creep, Structure, OwnedStructure, StructureSpawn, StructureTower, StructureContainer, StructureExtension, StructureRampart, StructureRoad, StructureWall, Source, Resource, ConstructionSite, Flag, Store, Spawning };
+export const PROTOTYPES = { GameObject, Creep, Structure, OwnedStructure, StructureSpawn, StructureTower, StructureContainer, StructureExtension, StructureRampart, StructureRoad, StructureWall, Source, Resource, ConstructionSite, Flag, BodyPart, Store, Spawning, ScoreCollector, AreaEffect, ConstructionBoost, StructureGoal, Portal, BonusFlag, ScoreFlag, EscortCreep, EffectZone };

@@ -1,6 +1,6 @@
 {
   "name": "screeps-arena-clone",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "\u5f00\u6e90 Screeps Arena \u590d\u523b\uff1a\u6309\u5b98\u65b9 API/\u89c4\u5219\u5b9e\u73b0\u7684\u786e\u5b9a\u6027\u5f15\u64ce + \u6d4f\u89c8\u5668\u5bf9\u5c40/\u56de\u653e\u5ba2\u6237\u7aef",
   "type": "module",
   "license": "MIT",

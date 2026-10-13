@@ -15,3 +15,17 @@ test('LAN: client joins with code, host runs authoritative match and streams tic
   while (!m.done) host.tick(m.step()); host.end(m.world.result); await wait(20);
   assert.ok(started && started.terrain.length === 10000); assert.equal(ticks, m.world.tick - 1); assert.deepEqual(ended, m.world.result);
 });
+test('LAN: both players submit code + build plans; plans become mirrored construction sites visible to all clients', async () => {
+  const { transport, WS } = memoryTransport();
+  const host = new HostSession(transport, { name: 'host' });
+  const a = new ClientSession('mem://', { pid: 'a', name: 'A', WS }), b = new ClientSession('mem://', { pid: 'b', name: 'B', WS });
+  let firstA, firstB; a.onStart = m => firstA = m.first; b.onStart = m => firstB = m.first;
+  await wait(); assert.equal(a.slot, 'p2'); assert.equal(b.slot, 'spectator');
+  a.sendCode('export function loop(){}', [{ dx: 3, dy: 0, type: 'StructureWall' }, { dx: 1, dy: 1, type: 'Bogus' }]); await wait();
+  assert.deepEqual(host.guestPlan(), [{ dx: 3, dy: 0, type: 'StructureWall' }]);
+  const m = createLiveMatch({ seed: 5, scripts: ['export function loop(){}', host.guestCode()], plans: [[{ dx: 3, dy: 0, type: 'StructureRampart' }], host.guestPlan()] });
+  host.start(m.meta(), m.terrain, m.first); await wait(10);
+  const sites = firstB.objs.filter(o => o.t === 'ConstructionSite');
+  assert.deepEqual(sites.map(s => [s.o, s.x, s.y, s.st]).sort(), [['p1', 11, 50, 'StructureRampart'], ['p2', 88, 50, 'StructureWall']]);
+  assert.deepEqual(firstA, firstB);
+});

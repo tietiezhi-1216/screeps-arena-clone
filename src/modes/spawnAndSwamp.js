@@ -20,12 +20,16 @@ export const CONFIG = {
 export function generateTerrain(seed) {
   const r = mulberry32(seed), t = new Uint8Array(W * H);
   let g = new Uint8Array(W * H);
-  for (let y = 0; y < H; y++) for (let x = 0; x < W / 2; x++) { const v = r(); g[y * W + x] = v < 0.07 ? 1 : v < 0.55 ? 2 : 0; }
+  for (let y = 0; y < H; y++) for (let x = 0; x < W / 2; x++) { const v = r(); g[y * W + x] = v < 0.16 ? 1 : v < 0.55 ? 2 : 0; }
   for (let it = 0; it < 3; it++) { const n = new Uint8Array(g); for (let y = 0; y < H; y++) for (let x = 0; x < W / 2; x++) {
     let s = 0, wl = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const v = g[Math.min(H - 1, Math.max(0, y + dy)) * W + Math.min(W / 2 - 1, Math.max(0, x + dx))]; if (v === 2) s++; if (v === 1) wl++; }
-    n[y * W + x] = wl >= 5 ? 1 : s >= 5 ? 2 : wl >= 3 && r() < 0.3 ? 1 : 0; } g = n; }
+    n[y * W + x] = wl >= 5 || (g[y * W + x] === 1 && wl >= 3) ? 1 : s >= 5 ? 2 : wl >= 3 && r() < 0.3 ? 1 : 0; } g = n; }
   for (let y = 0; y < H; y++) for (let x = 0; x < W / 2; x++) { t[y * W + x] = g[y * W + x]; t[y * W + (W - 1 - x)] = g[y * W + x]; }
   for (let i = 0; i < W; i++) { t[i] = t[(H - 1) * W + i] = t[i * W] = t[i * W + W - 1] = 1; t[W + i] = t[(H - 2) * W + i] = t[i * W + 1] = t[i * W + W - 2] = 1; }
+  // 连通性保证：从左侧 spawn 洪泛，若到不了右侧则沿 y=50 打通一条（镜像对称）走廊
+  const seen = new Uint8Array(W * H), q = [50 * W + 8]; seen[q[0]] = 1;
+  while (q.length) { const i = q.pop(), x = i % W, y = (i - x) / W; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const j = (y + dy) * W + x + dx; if (!seen[j] && t[j] !== 1) { seen[j] = 1; q.push(j); } } }
+  if (!seen[50 * W + 91]) for (let x = 2; x < W - 2; x++) if (t[50 * W + x] === 1) t[50 * W + x] = 2;
   return t;
 }
 export const SPAWNS = [{ x: 8, y: 50 }, { x: 91, y: 50 }];
