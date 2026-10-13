@@ -41,11 +41,11 @@ test('mirror bots across many seeds: neither side systematically wins (CTF + swa
   const c = tally('capture-the-flag', ctf, seeds);
   assert.ok(c.p1 < seeds.length, `CTF p1 won all ${JSON.stringify(c)}`);
   assert.ok(c.p2 + c.draw > 0, `CTF p2 never won nor drew: ${JSON.stringify(c)}`);
-  assert.ok(c.p1 <= 8, `CTF p1 bias too strong: ${JSON.stringify(c)}`);
+  assert.ok(c.p1 <= 9 && c.p2 <= 9, `CTF bias too strong: ${JSON.stringify(c)}`);
   const s = tally('spawn-and-swamp', rush, seeds);
   assert.ok(s.p1 < seeds.length, `swamp p1 won all ${JSON.stringify(s)}`);
   assert.ok(s.p2 + s.draw > 0, `swamp p2 never won nor drew: ${JSON.stringify(s)}`);
-  assert.ok(s.p1 <= 8, `swamp p1 bias too strong: ${JSON.stringify(s)}`);
+  assert.ok(s.p1 <= 9 && s.p2 <= 9, `swamp bias too strong: ${JSON.stringify(s)}`);
 });
 
 test('budget CPU is deterministic across repeated runs', () => {

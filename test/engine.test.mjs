@@ -19,7 +19,8 @@ test('spawnCreep: deferred intent — energy/spawn commit on step; same-tick ove
   assert.equal(w.all(P.Creep).length, 0, 'provisional creep not in world yet');
   const r = s.spawnCreep([C.MOVE, C.ATTACK]);
   assert.equal(s.store.energy, 300); w.current = null; w.step();
-  assert.equal(s.store.energy, 170); assert.ok(s.spawning); assert.equal(s.spawning.needTime, 6);
+  // 结算扣 130 后同 tick Spawn 再 +SPAWN_ENERGY_REGEN
+  assert.equal(s.store.energy, 170 + C.SPAWN_ENERGY_REGEN); assert.ok(s.spawning); assert.equal(s.spawning.needTime, 6);
   assert.equal(w.all(P.Creep).length, 1); assert.equal(r.object.spawning, true); assert.ok(r.object.exists);
   w.current = 'p1'; assert.equal(s.spawnCreep([C.MOVE]).error, C.ERR_BUSY);
   for (let i = 0; i < 6; i++) w.step(); assert.equal(r.object.spawning, false); assert.equal(P.range(r.object, s), 1);
@@ -85,8 +86,10 @@ test('CPU limit aborts infinite loops and discards ALL intents including spawnCr
     'export function loop(){}'] });
   assert.match(r.frames[1].log.p1.join(), /timed out/);
   assert.equal(r.frames[1].objs.filter(o => o.t === 'Creep').length, 0, 'spawnCreep must not commit on timeout');
-  const sp = r.frames[1].objs.find(o => o.t === 'StructureSpawn' && o.o === 'p1');
-  assert.equal(sp.e, r.frames[0].objs.find(o => o.t === 'StructureSpawn' && o.o === 'p1').e, 'energy unchanged');
+  const sp0 = r.frames[0].objs.find(o => o.t === 'StructureSpawn' && o.o === 'p1');
+  const sp1 = r.frames[1].objs.find(o => o.t === 'StructureSpawn' && o.o === 'p1');
+  // 超时作废 spawn 后仍会走 Spawn 回能（官方每 tick +1），但不得因 spawnCreep 扣费
+  assert.equal(sp1.e, sp0.e + C.SPAWN_ENERGY_REGEN, 'only regen, no spawn cost');
 });
 test('sandbox: no access to globals / dynamic code', () => {
   const r = runMatch({ seed: 1, maxTicks: 1, scripts: [

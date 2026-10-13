@@ -16,13 +16,16 @@ test('spawn regenerates 1 energy per tick up to capacity', () => {
 test('extensions anywhere fund spawnCreep (no distance filter)', () => {
   const w = mk(); const s = w.add(new P.StructureSpawn(w, 10, 10, 'p1')); s.store.energy = 0;
   const e = w.add(new P.StructureExtension(w, 80, 80, 'p1')); e.store.energy = 100;
-  const r = s.spawnCreep([C.MOVE, C.MOVE]); assert.ok(r.object); assert.equal(e.store.energy, 0);
+  const r = s.spawnCreep([C.MOVE, C.MOVE]); assert.ok(r.object);
+  assert.equal(e.store.energy, 100, 'deferred until step'); w.current = null; w.step();
+  assert.equal(e.store.energy, 0); assert.ok(s.spawning);
 });
 test('spawnCreep drains spawn before extensions', () => {
   const w = mk(); const s = w.add(new P.StructureSpawn(w, 10, 10, 'p1')); s.store.energy = 80;
   const e = w.add(new P.StructureExtension(w, 12, 10, 'p1')); e.store.energy = 100;
-  s.spawnCreep([C.MOVE, C.MOVE]);
-  assert.equal(s.store.energy, 0); assert.equal(e.store.energy, 80);
+  s.spawnCreep([C.MOVE, C.MOVE]); w.current = null; w.step();
+  // 扣 100：spawn 80 + ext 20，再 +SPAWN_ENERGY_REGEN
+  assert.equal(s.store.energy, C.SPAWN_ENERGY_REGEN); assert.equal(e.store.energy, 80);
 });
 test('rampart absorbs melee and rangedMassAttack', () => {
   const w = mk();
