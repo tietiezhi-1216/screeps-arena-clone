@@ -250,7 +250,7 @@ window.ArenaBlocks = {
         for (const b of fly.getWorkspace().getAllBlocks(false)) for (const inp of b.inputList) for (const f of inp.fieldRow) if (f.setEnabled) f.setEnabled(false);
         fly.scrollToStart && fly.scrollToStart(); api.onFly?.(id); Blockly.svgResize(ws);
       },
-      closeCat: close,
+      closeCat: close, flyOpen: () => fly.isVisible(),
       code: () => toCode(ws), resize: () => Blockly.svgResize(ws),
       load(state) { Blockly.Events.disable(); ws.clear(); if (state) try { Blockly.serialization.workspaces.load(state, ws); } catch (e) {} Blockly.Events.enable(); ws.clearUndo(); onChange(toCode(ws), Blockly.serialization.workspaces.save(ws)); },
       undo: r => ws.undo(!!r), zoom: d => ws.zoomCenter(d), center: () => ws.scrollCenter(),

@@ -156,3 +156,6 @@ input:focus{border-color:var(--acc)}
 .updRow{display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;font-size:var(--fs-s);color:var(--muted);letter-spacing:0;border-radius:var(--r-s);position:relative}
 .updRow:active{background:#FFFFFF0D}.updRow:disabled{opacity:.4}.updRow .v{color:var(--faint)}.updRow .v:empty{display:none}
 .updDot{position:absolute;top:8px;right:4px;width:6px;height:6px;border-radius:50%;background:var(--acc)}
+
+#ver.verTap{cursor:pointer;padding:6px 12px;margin:-6px 0 -4px;touch-action:manipulation}#ver.verTap:active{color:var(--muted)}
+#toast{position:fixed;left:50%;bottom:calc(64px + var(--bot,0px));transform:translateX(-50%);z-index:2147483001;background:#000c;color:#fff;font-size:13px;padding:8px 14px;border-radius:4px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s}#toast.on{opacity:1}

@@ -43,7 +43,7 @@
     const ui = {
       el: d, md, get state() { return state; },
       show({ tag, current, notes, size }) { q('.uuTitle').textContent = `发现新版本 ${tag}`; q('.uuCur').textContent = `当前版本 ${current}` + (size ? ` · 安装包 ${fmtMB(size)}` : '');
-        q('.uuNotes').innerHTML = md(notes); q('.uuNotes').scrollTop = 0; bar.classList.add('hidden'); msg.textContent = ''; later.textContent = '稍后'; set('ready', '立即更新'); d.classList.remove('hidden'); },
+        q('.uuNotes').innerHTML = md(notes); q('.uuNotes').scrollTop = 0; bar.classList.add('hidden'); msg.textContent = ''; later.textContent = '稍后'; set('ready', '立即更新'); const host = o.parent || document.body; if (d.parentNode !== host || host.lastElementChild !== d) host.appendChild(d); d.classList.remove('hidden'); },
       downloading(got, total) { const p = total > 0 ? Math.min(100, got / total * 100) : 0; bar.classList.remove('hidden'); bar.firstChild.style.width = p.toFixed(1) + '%';
         msg.textContent = `${fmtMB(got)} / ${total > 0 ? fmtMB(total) : '?'}（${p.toFixed(0)}%）`; later.textContent = '取消'; set('downloading', '下载中…', true); },
       install(m) { bar.firstChild.style.width = '100%'; if (m != null) msg.textContent = m; later.textContent = '稍后'; set('install', '安装'); },

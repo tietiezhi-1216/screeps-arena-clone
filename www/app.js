@@ -37,7 +37,23 @@ const stack = ['home'];
 function go(id, push = true) { $$('.screen').forEach(s => s.classList.toggle('on', s.id === id)); if (push && stack.at(-1) !== id) stack.push(id); if (id === 'match') resize(); if (id === 'editor') setTimeout(() => blocks?.resize(), 0); if (id === 'home') renderHome(); if (id === 'scripts') renderLib(); }
 function back() { if ($('#sheet:not(.hidden),#dlg:not(.hidden)')) return closeDlg(); if (stack.length > 1) stack.pop(); const id = stack.at(-1); if (['lobby', 'setup', 'modes', 'home'].includes(id)) stopLive(); go(id, false); }
 $$('[data-back]').forEach(b => b.onclick = back);
-window.Capacitor?.Plugins?.App?.addListener?.('backButton', () => (stack.length > 1 || !$('#dlg').classList.contains('hidden') ? back() : window.Capacitor.Plugins.App.exitApp?.()));
+// 安卓返回键：先关最上层（更新弹窗 → 身体部件面板等动态弹窗 → 对话框/底部菜单 → Blockly 下拉/积木抽屉），再逐级返回上一页；首页按两次（2 秒内）才退出
+let exitArm = 0;
+function toast(t) { let el = $('#toast'); if (!el) { el = document.createElement('div'); el.id = 'toast'; document.body.appendChild(el); } el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 1800); }
+function hardwareBack() {
+  const uu = document.querySelector('.uu:not(.hidden)'); if (uu) { uu.querySelector('.uuLater')?.click(); return 'update'; }
+  const dyn = [...document.querySelectorAll('body > .dlg:not(#dlg):not(#sheet)')].pop(); if (dyn) { dyn.querySelector('[data-a="no"]')?.click(); if (dyn.isConnected) dyn.remove(); return 'panel'; }
+  if ($('#sheet:not(.hidden),#dlg:not(.hidden)')) { closeDlg(); return 'dialog'; }
+  if (window.Blockly) { if (Blockly.WidgetDiv?.isVisible?.()) { Blockly.WidgetDiv.hide(); return 'widget'; } if (Blockly.DropDownDiv?.isVisible?.()) { Blockly.DropDownDiv.hideIfOwner ? Blockly.DropDownDiv.hide() : Blockly.DropDownDiv.hide(); return 'widget'; } }
+  if (stack.at(-1) === 'editor' && blocks?.flyOpen?.()) { blocks.closeCat(); return 'flyout'; }
+  if (!$('#result').classList.contains('hidden')) { $('#resBack').click(); return 'page'; }
+  if (stack.length > 1) { if (stack.at(-1) === 'match') playing = false; back(); return 'page'; }
+  if (Date.now() - exitArm < 2000) { (CapApp?.exitApp ? CapApp.exitApp() : window.__exitHook?.()); return 'exit'; }
+  exitArm = Date.now(); toast('再按一次退出'); return 'toast';
+}
+window.hardwareBack = hardwareBack;
+const CapApp = window.Capacitor?.isNativePlatform?.() ? (window.Capacitor.Plugins?.App || window.Capacitor.registerPlugin?.('App')) : null;
+CapApp?.addListener?.('backButton', () => hardwareBack());
 
 // ---------- 对话框 ----------
 let dlgOk = null;

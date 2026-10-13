@@ -1,7 +1,7 @@
 {
   "name": "screeps-arena-clone",
-  "version": "0.10.0",
-  "description": "\u5f00\u6e90 Screeps Arena \u590d\u523b\uff1a\u6309\u5b98\u65b9 API/\u89c4\u5219\u5b9e\u73b0\u7684\u786e\u5b9a\u6027\u5f15\u64ce + \u6d4f\u89c8\u5668\u5bf9\u5c40/\u56de\u653e\u5ba2\u6237\u7aef",
+  "version": "0.10.1",
+  "description": "开源 Screeps Arena 复刻：按官方 API/规则实现的确定性引擎 + 浏览器对局/回放客户端",
   "type": "module",
   "license": "MIT",
   "scripts": {
@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@capacitor/android": "^6.2.2",
+    "@capacitor/app": "^6.0.3",
     "@capacitor/browser": "^6.0.6",
     "@capacitor/core": "^6.2.2",
     "acorn": "^8.19.0",
@@ -19,6 +20,7 @@
     "capacitor-lan-server": "file:plugins/capacitor-lan-server"
   },
   "devDependencies": {
-    "@capacitor/cli": "^6.2.2"
+    "@capacitor/cli": "^6.2.2",
+    "puppeteer-core": "^25.13.0"
   }
 }

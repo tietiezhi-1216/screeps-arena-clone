@@ -53,6 +53,11 @@ function updBadge(on) {
 
 function rowVal(t) { const v = document.getElementById('chkUpdV'); if (v) v.textContent = t; }
 window.checkUpdate = checkUpdate;
-document.getElementById('chkUpd').onclick = async function () { if (this.disabled) return; this.disabled = true; rowVal('检查中…'); const r = await checkUpdate(true); if (r === 'new') rowVal(''); this.disabled = false; };
+// 手动检查：点「检查更新」或版本号都走同一个 checkUpdate（和自动检查同一套函数）
+let manualBusy = false;
+async function manualCheck() { if (manualBusy) return; manualBusy = true; const b = document.getElementById('chkUpd'); if (b) b.disabled = true; rowVal('检查中…');
+  try { const r = await checkUpdate(true); if (r === 'new') rowVal(''); return r; } finally { manualBusy = false; if (b) b.disabled = false; } }
+window.manualCheckUpdate = manualCheck;
+for (const id of ['chkUpd', 'ver']) { const el = document.getElementById(id); if (el) { el.addEventListener('click', manualCheck); if (id === 'ver') { el.setAttribute('role', 'button'); el.classList.add('verTap'); } } }
 // 启动 20 秒后自动检查一次，之后每 30 分钟
 if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) { setTimeout(() => checkUpdate(false), 20000); setInterval(() => checkUpdate(false), 30 * 60000); }
