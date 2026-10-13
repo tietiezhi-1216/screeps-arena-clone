@@ -52,38 +52,41 @@ export function terrainCanvas(terrain) {
   return c;
 }
 const cx = v => v * TS + TS / 2;
-// 扁平精灵：以 (0,0) 为中心、单位为像素（1 格 = TS=8）。u = 放大系数，全图缩放时保持可读
-const D = '#1a1f27', RIM = '#0d1015';
+// 扁平精灵：单位 = 格（以格中心为原点，调用方按 TS 缩放）。比例对照官方客户端 / Screeps World 渲染器：
+// creep 半径 .43（部件环 .345，中心 .27）· spawn 外径 1 格（半径 .5，核心 .41）· extension/tower 半径 .4 · container .5×.6 · source .6 方块
+const RIM = '#000', CORE = '#111';
 const circ = (g, r, fill) => { g.fillStyle = fill; g.beginPath(); g.arc(0, 0, r, 0, 7); g.fill(); };
-const ring = (g, r, w, col, a0 = 0, a1 = 7) => { g.strokeStyle = col; g.lineWidth = w; g.beginPath(); g.arc(0, 0, r, a0, a1); g.stroke(); };
-const rrect = (g, x, y, w, h, r, fill) => { g.fillStyle = fill; g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, r) : g.rect(x, y, w, h); g.fill(); };
+const ring = (g, r, w, col, a0 = 0, a1 = 7) => { g.strokeStyle = col; g.lineWidth = w; g.lineCap = 'butt'; g.beginPath(); g.arc(0, 0, r, a0, a1); g.stroke(); };
+const rrect = (g, x, y, w, h, r, fill, stroke, lw) => { g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, r) : g.rect(x, y, w, h); if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw; g.stroke(); } };
+const EN = '#ffe56d';
 export function drawSprite(g, o, col) {
   switch (o.t) {
-    case 'StructureRoad': circ(g, 1.6, '#4a5260'); break;
-    case 'AreaEffect': g.globalAlpha = .35; rrect(g, -4, -4, 8, 8, 1.5, '#58f'); g.globalAlpha = 1; break;
-    case 'Portal': ring(g, 4, 1.4, '#b58cff'); circ(g, 1.8, '#b58cff'); break;
-    case 'ConstructionBoost': g.fillStyle = '#ffe56d'; g.beginPath(); g.moveTo(0, -4); g.lineTo(3.6, 3); g.lineTo(-3.6, 3); g.closePath(); g.fill(); break;
-    case 'StructureGoal': rrect(g, -5, -5, 10, 10, 2, RIM); rrect(g, -3.8, -3.8, 7.6, 7.6, 1.4, col); break;
-    case 'ScoreCollector': { circ(g, 6.5, RIM); ring(g, 5.2, 1.6, '#b58cff'); g.save(); g.rotate(Math.PI / 4); rrect(g, -2.4, -2.4, 4.8, 4.8, .8, '#e0c8ff'); g.restore(); break; }
-    case 'Resource': { const r = Math.min(3.2, 1.4 + Math.sqrt(o.e) / 10); circ(g, r + .7, RIM); circ(g, r, o.rt ? '#c9a2ff' : '#ffe56d'); break; }
-    case 'Source': { rrect(g, -4.2, -4.2, 8.4, 8.4, 1.6, '#3b3620'); const s = 6.4 * Math.sqrt(o.e / o.c); rrect(g, -s / 2, -s / 2, s, s, 1, '#ffe56d'); break; }
-    case 'StructureContainer': { rrect(g, -3.6, -4.2, 7.2, 8.4, 1.4, RIM); rrect(g, -2.8, -3.4, 5.6, 6.8, .8, '#3b4250'); const h = 6.8 * o.e / o.c; if (h > 0) rrect(g, -2.8, 3.4 - h, 5.6, h, .8, '#ffe56d'); break; }
-    case 'StructureExtension': circ(g, 3.4, RIM); ring(g, 2.7, 1.2, col); circ(g, 1.9 * Math.sqrt(o.e / (o.c || 1)), '#ffe56d'); break;
-    case 'Flag': { circ(g, 2, RIM); circ(g, 1.2, col); g.fillStyle = '#d8dde6'; g.fillRect(-.5, -5.5, 1, 6); g.fillStyle = col; g.beginPath(); g.moveTo(.5, -5.5); g.lineTo(5, -4); g.lineTo(.5, -2.4); g.closePath(); g.fill(); break; }
-    case 'BodyPart': { g.save(); g.rotate(Math.PI / 4); rrect(g, -2.6, -2.6, 5.2, 5.2, 1, RIM); rrect(g, -1.9, -1.9, 3.8, 3.8, .6, PART[o.bt === 'ranged_attack' ? 'r' : o.bt[0]] || '#fff'); g.restore(); break; }
-    case 'StructureWall': rrect(g, -4, -4, 8, 8, 1.2, '#40464f'); break;
-    case 'StructureRampart': g.globalAlpha = .55; g.strokeStyle = col; g.lineWidth = 1.4; g.beginPath(); g.roundRect ? g.roundRect(-4, -4, 8, 8, 2) : g.rect(-4, -4, 8, 8); g.stroke(); g.globalAlpha = 1; break;
-    case 'ConstructionSite': g.setLineDash([1.6, 1.4]); ring(g, 3, 1, col); g.setLineDash([]); circ(g, .9, col); break;
-    case 'StructureSpawn': {
-      circ(g, 7.6, RIM); ring(g, 6.2, 2.2, col); circ(g, 5, D); circ(g, 4.2 * Math.sqrt(o.e / o.c), '#ffe56d');
-      if (o.spn) ring(g, 8.8, 1.4, '#fff', -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * o.spn[0] / o.spn[1]); break; }
-    case 'StructureTower': { circ(g, 5, RIM); circ(g, 4, D); ring(g, 4, 1.4, col); rrect(g, -1.1, -6.2, 2.2, 5, .6, col); circ(g, 1.6 * Math.sqrt((o.e || 0) / (o.c || 1)), '#ffe56d'); break; }
+    case 'StructureRoad': circ(g, .15, '#4a5260'); break;
+    case 'AreaEffect': g.globalAlpha = .35; rrect(g, -.5, -.5, 1, 1, .1, '#58f'); g.globalAlpha = 1; break;
+    case 'Portal': ring(g, .4, .08, '#b58cff'); circ(g, .2, '#b58cff'); break;
+    case 'ConstructionBoost': g.fillStyle = EN; g.beginPath(); g.moveTo(0, -.4); g.lineTo(.36, .3); g.lineTo(-.36, .3); g.closePath(); g.fill(); break;
+    case 'StructureGoal': rrect(g, -.45, -.45, .9, .9, .1, RIM, col, .07); break;
+    case 'ScoreCollector': circ(g, .5, RIM); ring(g, .42, .07, '#b58cff'); circ(g, .34, CORE); g.save(); g.rotate(Math.PI / 4); rrect(g, -.15, -.15, .3, .3, .04, '#e0c8ff'); g.restore(); break;
+    case 'Resource': circ(g, Math.min(.25, .1 + Math.sqrt(o.e) / 120), o.rt ? '#c9a2ff' : EN); break;
+    case 'Source': { rrect(g, -.3, -.3, .6, .6, .06, '#3b3620'); const s = .5 * Math.sqrt(o.e / o.c); if (s > 0) rrect(g, -s / 2, -s / 2, s, s, .04, EN); break; }
+    case 'StructureContainer': { rrect(g, -.25, -.3, .5, .6, .05, '#1d1d1d', '#a0a0a0', .06); const h = .48 * o.e / o.c; if (h > 0) { g.fillStyle = EN; g.fillRect(-.19, .24 - h, .38, h); } break; }
+    case 'StructureExtension': circ(g, .4, RIM); ring(g, .34, .07, col); circ(g, .28, CORE); circ(g, .26 * Math.sqrt(o.e / (o.c || 1)), EN); break;
+    case 'Flag': g.fillStyle = '#d8dde6'; g.fillRect(-.22, -.42, .06, .84); g.fillStyle = col; g.beginPath(); g.moveTo(-.16, -.42); g.lineTo(.36, -.24); g.lineTo(-.16, -.06); g.closePath(); g.fill(); break;
+    case 'BodyPart': g.save(); g.rotate(Math.PI / 4); rrect(g, -.2, -.2, .4, .4, .05, PART[o.bt === 'ranged_attack' ? 'r' : o.bt[0]] || '#fff', RIM, .05); g.restore(); break;
+    case 'StructureWall': rrect(g, -.5, -.5, 1, 1, .06, CORE, '#4a4a4a', .06); break;
+    case 'StructureRampart': g.globalAlpha = .4; rrect(g, -.5, -.5, 1, 1, .12, col); g.globalAlpha = 1; rrect(g, -.47, -.47, .94, .94, .12, null, col, .06); break;
+    case 'ConstructionSite': g.setLineDash([.08, .06]); ring(g, .3, .06, col); g.setLineDash([]); circ(g, .08, col); break;
+    case 'StructureSpawn':
+      circ(g, .5, RIM); ring(g, .45, .045, col); circ(g, .41, CORE); circ(g, .35 * Math.sqrt(o.e / o.c), EN);
+      if (o.spn) ring(g, .45, .1, '#fff', -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * o.spn[0] / o.spn[1]); break;
+    case 'StructureTower': circ(g, .4, RIM); ring(g, .34, .07, col); circ(g, .27, CORE); circ(g, .25 * Math.sqrt((o.e || 0) / (o.c || 1)), EN); rrect(g, -.1, -.62, .2, .5, 0, CORE, col, .05); break;
     case 'Creep': {
       const parts = o.b.split(','), n = parts.length;
-      circ(g, 4.6, RIM);
-      parts.forEach((p, i) => { const a0 = -Math.PI / 2 + i * 2 * Math.PI / n; ring(g, 3.7, 1.7, p.endsWith('!') ? '#3a3f47' : PART[p[0]], a0 + .06, a0 + 2 * Math.PI / n - .06); });
-      circ(g, 2.5, col); if (o.e) circ(g, 1.1, '#ffe56d');
-      if (o.esc) ring(g, 5.4, .9, '#ffe56d'); break; }
+      if (parts.some(p => p[0] === 't' && !p.endsWith('!'))) ring(g, .47, .05, 'rgba(255,255,255,.7)');
+      circ(g, .43, '#222'); ring(g, .43, .03, col);
+      parts.forEach((p, i) => { if (p[0] === 't') return; const a0 = -Math.PI / 2 + i * 2 * Math.PI / n; ring(g, .345, .13, p.endsWith('!') ? '#3a3f47' : PART[p[0]], a0, a0 + 2 * Math.PI / n); });
+      circ(g, .27, CORE); circ(g, .17, col); if (o.e) ring(g, .22, .05, EN);
+      if (o.esc) ring(g, .52, .04, EN); break; }
   }
 }
 export function drawFrame(g, terrainC, f, prev, k = 1, sel, u = 1) {
@@ -96,10 +99,9 @@ export function drawFrame(g, terrainC, f, prev, k = 1, sel, u = 1) {
     const [x, y] = pos(o), col = COLORS[o.o] || COLORS.neutral;
     if (o.t === 'Creep' && o.sp) continue;
     if (o.t === 'EffectZone') { const rr = cx(o.x + o.r + 0.5) - cx(o.x - o.r - 0.5); g.globalAlpha = .16; g.fillStyle = o.ef === 'freeze' ? '#6cf' : o.ef === 'heal' ? '#6f6' : '#f55'; g.fillRect(x - rr / 2, y - rr / 2, rr, rr); g.globalAlpha = 1; continue; }
-    const us = (o.t === 'StructureWall' || o.t === 'StructureRoad') ? 1 : u;
-    g.save(); g.translate(x, y); g.scale(us, us); drawSprite(g, o, col);
-    if (o.h != null && o.h < o.hm && (o.t === 'Creep' || o.t === 'StructureSpawn' || o.t === 'StructureTower')) hpBar(g, 0, o.t === 'Creep' ? -7 : -10.5, o.h / o.hm, col);
-    if (sel && sel === o.id) { g.strokeStyle = '#fff'; g.lineWidth = .8; g.strokeRect(-6, -6, 12, 12); }
+    g.save(); g.translate(x, y); g.scale(TS, TS); drawSprite(g, o, col);
+    if (o.h != null && o.h < o.hm && (o.t === 'Creep' || o.t === 'StructureSpawn' || o.t === 'StructureTower')) hpBar(g, 0, -.68, o.h / o.hm, col);
+    if (sel && sel === o.id) { g.strokeStyle = '#fff'; g.lineWidth = .06; g.strokeRect(-.55, -.55, 1.1, 1.1); }
     g.restore();
   }
   if (k > 0.3) for (const e of f.ev || []) {
@@ -110,7 +112,7 @@ export function drawFrame(g, terrainC, f, prev, k = 1, sel, u = 1) {
   }
   for (const pid in f.vis || {}) for (const it of f.vis[pid]) drawVisual(g, it);
 }
-function hpBar(g, x, y, r, col) { g.fillStyle = '#0d1015'; g.fillRect(x - 5.5, y - .4, 11, 2.4); g.fillStyle = r > .5 ? '#65fd62' : r > .25 ? '#ffd34e' : '#f93842'; g.fillRect(x - 5, y, 10 * Math.max(0, r), 1.6); }
+function hpBar(g, x, y, r, col) { g.fillStyle = '#000'; g.fillRect(x - .45, y - .06, .9, .14); g.fillStyle = r > .5 ? '#65fd62' : r > .25 ? '#ffd34e' : '#f93842'; g.fillRect(x - .43, y - .04, .86 * Math.max(0, r), .1); }
 function drawVisual(g, it) {
   const s = it[it.length - 1] || {}; g.globalAlpha = s.opacity ?? 0.5; g.lineWidth = (s.strokeWidth ?? s.width ?? 0.1) * TS;
   if (it[0] === 'c') { g.fillStyle = s.fill || '#fff'; g.beginPath(); g.arc(cx(it[1][0]), cx(it[1][1]), (s.radius ?? .15) * TS, 0, 7); g.fill(); }
