@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- 原创图标：受 Screeps Arena 启发（深色底 + 竞技场圆环 + 两个对峙的 creep），非官方素材 -->
+  <rect width="512" height="512" rx="96" fill="#1b1d22"/>
+  <circle cx="256" cy="256" r="190" fill="#23262d" stroke="#ffd34e" stroke-width="22"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#ffd34e" stroke-opacity=".25" stroke-width="6" stroke-dasharray="18 14"/>
+  <path d="M256 66 V446 M66 256 H446" stroke="#ffd34e" stroke-opacity=".18" stroke-width="6"/>
+  <g transform="translate(176 256)"><circle r="58" fill="none" stroke="#5ec8ff" stroke-width="16" stroke-dasharray="76 15"/><circle r="36" fill="#5ec8ff"/></g>
+  <g transform="translate(336 256)"><circle r="58" fill="none" stroke="#ff6f6f" stroke-width="16" stroke-dasharray="76 15"/><circle r="36" fill="#ff6f6f"/></g>
+  <path d="M236 228 L276 284 M276 228 L236 284" stroke="#ffd34e" stroke-width="14" stroke-linecap="round"/>
+</svg>

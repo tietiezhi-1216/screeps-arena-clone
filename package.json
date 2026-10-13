@@ -1,0 +1,12 @@
+{
+  "name": "screeps-arena-clone",
+  "version": "0.1.0",
+  "description": "开源 Screeps Arena 复刻：按官方 API/规则实现的确定性引擎 + 浏览器对局/回放客户端",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test test/",
+    "start": "node scripts/serve.mjs 8080",
+    "match": "node scripts/run-match.mjs bots/rush.mjs bots/kite.mjs"
+  }
+}
