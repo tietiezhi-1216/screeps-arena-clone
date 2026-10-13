@@ -1,6 +1,6 @@
 <!doctype html><html lang="zh"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#1E1E1E"><title>Screeps Arena</title><link rel="icon" href="favicon.png"><link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="style.css"></head><body>
+<meta name="theme-color" content="#1E1E1E"><title>Screeps Arena</title><link rel="icon" href="favicon.png"><link rel="stylesheet" href="tokens.css"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="update-ui.css"></head><body>
 
 <section id="home" class="screen on">
  <div class="home">
@@ -11,7 +11,7 @@
    <button id="goScripts" data-icon="file-code"><span class="lb">我的脚本</span></button>
    <button id="goReplays" data-icon="history"><span class="lb">回放</span></button>
   </div>
-  <div id="ver" class="foot"></div>
+  <div class="foot about"><div id="ver"></div><button id="chkUpd" class="updRow"><span class="lb">检查更新</span><span id="chkUpdV" class="v"></span></button></div>
  </div>
 </section>
 
@@ -83,5 +83,5 @@
 <div id="dlg" class="dlg hidden"><div class="box"><div class="dt" id="dlgT"></div><div id="dlgB"></div><div class="row2"><button id="dlgNo" class="btn">取消</button><button id="dlgOk" class="btn primary">确定</button></div></div></div>
 <div id="sheet" class="dlg hidden"><div class="box" id="sheetB"></div></div>
 
-<script src="version.js"></script><script src="icons.js"></script><script src="icons-extra.js"></script><script src="vendor/blockly_compressed.js"></script><script src="vendor/blocks_compressed.js"></script><script src="vendor/javascript_compressed.js"></script><script src="vendor/msg-zh.js"></script><script src="blocks.js"></script><script src="vendor/capacitor.js"></script><script src="update.js"></script>
+<script src="version.js"></script><script src="icons.js"></script><script src="icons-extra.js"></script><script src="vendor/blockly_compressed.js"></script><script src="vendor/blocks_compressed.js"></script><script src="vendor/javascript_compressed.js"></script><script src="vendor/msg-zh.js"></script><script src="blocks.js"></script><script src="vendor/capacitor.js"></script><script src="update-ui.js"></script><script src="update.js"></script>
 <script type="module" src="app.js"></script></body></html>
