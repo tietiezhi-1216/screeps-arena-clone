@@ -48,7 +48,7 @@ export class World {
       getRange: (a, b) => range(a, b),
       getDirection: (dx, dy) => direction(dx, dy),
       getTerrainAt: p => w.terrainAt(p.x, p.y),
-      getCpuTime: () => Math.round((globalThis.performance?.now() ?? Date.now()) * 1e6 - (w._cpuStart || 0)),
+      getCpuTime: () => Math.round(((globalThis.performance?.now() ?? Date.now()) - (w._cpuStartMs || 0)) * 1e6),
       getHeapStatistics: () => ({ total_heap_size: 0, used_heap_size: 0, heap_size_limit: 256 * 1024 * 1024 }),
       findInRange: (from, ps, r) => ps.filter(p => range(from, p) <= r),
       findClosestByRange: (from, ps) => { let b = null, bd = Infinity; for (const p of ps) { const d = range(from, p); if (d < bd) { bd = d; b = p; } } return b; },
@@ -191,6 +191,6 @@ export class World {
       if (o instanceof P.StructureSpawn && o.spawning) s.spn = [o.spawning.needTime - o.spawning.remainingTime, o.spawning.needTime];
       objs.push(s);
     }
-    return { tick: this.tick, objs, ev: this.events, vis: this.visuals, log: this.logs, result: this.result };
+    return { tick: this.tick, objs, ev: this.events, vis: this.visuals, log: this.logs, cpu: this.cpu, result: this.result };
   }
 }

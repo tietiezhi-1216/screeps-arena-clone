@@ -59,7 +59,7 @@ test('pathfinding: findPath avoids walls; searchPath returns cost', () => {
 });
 test('sandbox import rewriting', () => {
   const t = transformModule("import { a, b as c } from 'game/utils';\nimport * as K from 'game/constants';\nexport function loop(){}");
-  assert.match(t, /const \{a, b: c\} = __require\("game\/utils"\)/); assert.match(t, /return \{ loop \}/);
+  assert.match(t, /const \{a, "b": c\} = __require\("game\/utils"\)/); assert.match(t, /"loop": loop/); assert.match(t, /function loop\(\)\{__chk\(\);/);
 });
 test('full match is deterministic and ends', () => {
   const scripts = ['bots/rush.mjs', 'bots/kite.mjs'].map(f => fs.readFileSync(f, 'utf8'));
@@ -70,4 +70,17 @@ test('full match is deterministic and ends', () => {
 test('script errors are caught and logged', () => {
   const r = runMatch({ seed: 1, maxTicks: 3, scripts: ['export function loop(){ throw new Error("boom") }', 'syntax error here ('] });
   assert.match(r.frames[1].log.p1[0], /boom/); assert.match(r.frames[1].log.p2[0], /compile error/);
+});
+
+test('CPU limit aborts infinite loops and discards intents', () => {
+  const r = runMatch({ seed: 1, maxTicks: 3, scripts: [
+    "import {getObjectsByPrototype} from 'game/utils'; import {StructureSpawn} from 'game/prototypes'; import {MOVE} from 'game/constants';\nexport function loop(){ getObjectsByPrototype(StructureSpawn).find(s=>s.my).spawnCreep([MOVE]); if (true) { try { while(true){} } catch(e) {} for(;;); } }",
+    'export function loop(){}'] });
+  assert.match(r.frames[1].log.p1.join(), /timed out/); assert.equal(r.frames[1].objs.filter(o => o.t === 'Creep').length >= 0, true);
+});
+test('sandbox: no access to globals / dynamic code', () => {
+  const r = runMatch({ seed: 1, maxTicks: 1, scripts: [
+    "export function loop(){ console.log(typeof globalThis, typeof fetch, typeof self, typeof process, (function(){ return typeof this })()); }",
+    'export function loop(){}'] });
+  assert.equal(r.frames[1].log.p1[0], 'undefined undefined undefined undefined undefined');
 });

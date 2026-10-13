@@ -8,5 +8,15 @@
     "test": "node --test test/",
     "start": "node scripts/serve.mjs 8080",
     "match": "node scripts/run-match.mjs bots/rush.mjs bots/kite.mjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.2",
+    "@capacitor/browser": "^6.0.6",
+    "@capacitor/core": "^6.2.2",
+    "acorn": "^8.19.0",
+    "capacitor-app-updater": "file:plugins/capacitor-app-updater"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.2"
   }
 }

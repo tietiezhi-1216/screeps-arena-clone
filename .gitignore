@@ -1,3 +1,12 @@
 node_modules/
-*.replay.json
 replay*.json
+/android/
+/www/src/
+/www/bots/
+/www/vendor/
+/www/version.js
+/www/icon.svg
+*.apk
+*.idsig
+local.properties
+keystore.properties

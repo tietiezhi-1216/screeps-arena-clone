@@ -1,0 +1,1 @@
+{ "name": "capacitor-app-updater", "version": "0.1.0", "description": "In-app APK updater (GitHub Releases), adapted from screeps-blockly-mobile", "main": "index.js", "license": "MIT", "capacitor": { "android": { "src": "android" } }, "peerDependencies": { "@capacitor/core": "^6.0.0" } }

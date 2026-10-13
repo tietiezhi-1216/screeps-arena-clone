@@ -6,14 +6,33 @@
 
 > 非官方项目，与 Screeps / Screeps Arena 及其开发商无关。图标为原创设计，仅风格上致敬。
 
-![screenshot](docs/img/screenshot.png)
+**安卓手机游戏**（Capacitor 6），竖屏/横屏均可。下载：[Releases](../../releases/latest) 里的 `screeps-arena-v*.apk`；应用启动时会自动检查新版本并在应用内更新。
 
-## 快速开始
+![mobile](docs/img/mobile.png)
+
+## 开发
 ```bash
-npm test                 # 引擎规则测试（零依赖，Node ≥ 20）
+npm ci && npm test       # 引擎规则 + 沙盒测试
 npm run match            # 命令行跑一局：bots/rush.mjs vs bots/kite.mjs
-npm start                # 打开 http://localhost:8080/web/ ，在「代码」页编辑两方脚本，「对局」页点 ▶ 开始对局
+./scripts/prepare.sh && npm start   # 浏览器调试移动端界面：http://localhost:8080/www/
 ```
+
+## 打包安卓
+```bash
+APP_VERSION=0.2.0 VERSION_CODE=20 ./scripts/build-android.sh   # JDK17 / Android SDK 默认取 ~/sdk
+./scripts/sign.sh screeps-arena-v0.2.0.apk                      # 签名信息来自环境变量或本地 keystore.properties（已 gitignore）
+```
+`keystore.properties` 示例（不要提交）：`storeFile=~/keys/release.p12` / `storePassword=…` / `keyAlias=release`。
+
+## 移动端界面
+- 底部导航（横屏时变为左侧竖栏）：对局 / 代码 / 更多。
+- 地图：双指缩放、单指拖动、点对象弹出详情面板；回放控制条（播放/单步/倍速/拖动）、P1/P2 控制台。
+- 代码编辑器：行号、自动缩进、符号快捷键条、常用 API 代码片段、字号调节、提交前语法检查、示例模板。
+
+## 沙盒与 CPU 限制
+- 每 tick `cpuTimeLimit` 50 ms，首 tick `cpuTimeLimitFirstTick` 1000 ms（官方值）。用 acorn 解析脚本，在每个循环体和函数入口插入检查点；超时即中止该 tick，并作废该玩家本 tick 的全部指令。
+- 脚本以严格模式运行在独立 Worker 里；`globalThis/self/window/fetch/XMLHttpRequest/WebSocket/importScripts/localStorage/document…` 均被遮蔽，Worker 内网络能力被删除，`eval` 与所有 `Function` 构造器在编译后被封死。
+- 主线程看门狗：Worker 15 s 无进度直接终止。Node 命令行在独立 vm realm 中运行，并对每 tick 加硬超时。
 
 ## 写法与官方一致
 ```js
@@ -45,7 +64,9 @@ src/engine/pathfinder.js game/path-finder：CostMatrix + searchPath（A*，官�
 src/engine/world.js      确定性 tick 结算：战斗 → 经济 → 移动(含 pull、对换、冲突) → 死亡/生产/衰减 → 模式规则；回放快照
 src/engine/sandbox.js    玩家 ES 模块改写与执行、game/visual、arenaInfo
 src/modes/               对局模式（spawnAndSwamp）
-web/                     浏览器客户端：Web Worker 跑模拟 → Canvas 回放（逐 tick 插值、事件连线、对象检查器、控制台、回放存取）
+www/                     移动端客户端（Capacitor webDir）：Worker 跑模拟 → Canvas 回放，触控缩放/拖动、编辑器、应用内更新
+plugins/capacitor-app-updater  应用内更新插件（改自 screeps-blockly-mobile 的 AppUpdater）
+android-res/             启动图标（scripts/gen-icons.py 生成）
 bots/                    示例 AI
 test/                    规则测试
 ```
@@ -55,7 +76,6 @@ test/                    规则测试
 
 ## 路线图
 - [ ] Capture the Flag、Spawn and Swamp 高级版（Source/建造/Extension/Tower）、Collect and Control 等模式
-- [ ] 每 tick CPU 限时（cpuTimeLimit 50ms / 首 tick 1000ms）与更强的沙盒隔离
-- [ ] 代码编辑器（Monaco/CodeMirror）+ 类型提示；Blockly 积木模式
+- [ ] 代码补全/语法高亮；Blockly 积木模式（复用 screeps-blockly-mobile 的方案）
 - [ ] 联机对战 / 天梯、PixiJS 渲染与更贴近官方的美术
 - [ ] 与官方行为逐条对照测试（移动冲突、rampart、疲劳等边界情况）

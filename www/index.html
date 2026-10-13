@@ -1,0 +1,36 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#15171b"><title>Screeps Arena</title><link rel="icon" href="icon.svg"><link rel="stylesheet" href="style.css"></head><body>
+<div id="app">
+ <header><img src="icon.svg" class="logo"><b>SCREEPS</b><span class="arena">ARENA</span><span id="status"></span><button id="runTop" class="run">▶ 对局</button></header>
+ <main>
+  <section id="v-play" class="view on">
+   <canvas id="cv"></canvas>
+   <div class="hud"><div class="pl p1"><i></i><em id="p1info">—</em></div><div class="tick" id="tick">0</div><div class="pl p2"><em id="p2info">—</em><i></i></div></div>
+   <div id="result"></div>
+   <div id="empty">点 <b>▶ 对局</b> 用两边的脚本开一局<br><small>双指缩放 · 单指拖动 · 点对象查看详情</small></div>
+   <div class="fab"><button id="fit" title="适配">⤢</button><button id="conBtn" title="控制台">≡</button></div>
+   <div id="sheet" class="sheet"><div class="grab"></div><div class="sheet-tabs"><button data-s="inspect" class="on">对象</button><button data-s="p1">P1 控制台</button><button data-s="p2">P2 控制台</button><button id="sheetClose">✕</button></div><pre id="sheetBody"></pre></div>
+   <div class="controls"><button id="play" class="big">▶</button><button id="step">⏭</button><input id="scrub" type="range" min="0" max="0" value="0"><button id="speed">1×</button></div>
+  </section>
+  <section id="v-code" class="view">
+   <div class="code-top"><div class="seg"><button data-p="0" class="on"><i class="dot p1"></i>玩家 1</button><button data-p="1"><i class="dot p2"></i>玩家 2</button></div>
+    <select id="tpl"><option value="" disabled selected hidden>模板…</option></select><button id="fsm">A−</button><button id="fsp">A+</button><button id="check">✓ 检查</button></div>
+   <div class="editor"><pre id="gutter"></pre><textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea></div>
+   <div id="codeMsg"></div>
+   <div class="snips" id="snips"></div>
+   <div class="keys" id="keys"></div>
+  </section>
+  <section id="v-more" class="view"><div class="doc">
+   <h3>对局设置</h3><label>地图种子 <input id="seed" type="number" value="1"></label><label>模式 <select id="mode"><option value="spawn-and-swamp">Spawn and Swamp（基础）</option></select></label>
+   <h3>回放</h3><div class="row"><button id="save">保存回放</button><button id="load">载入回放</button><input type="file" id="file" hidden accept=".json,application/json"></div>
+   <h3>应用</h3><div class="row"><button id="updBtn">检查更新</button><span id="ver"></span></div>
+   <h3>API 速查（对齐 arena.screeps.com/docs）</h3>
+   <p>脚本是 ES 模块，导出 <code>loop()</code>，每 tick 调用一次；可导入 <code>game/utils</code>、<code>game/prototypes</code>、<code>game/constants</code>、<code>game/path-finder</code>、<code>game/visual</code>、<code>game</code>。</p>
+   <p>CPU：每 tick <code>50 ms</code>，首 tick <code>1000 ms</code>；超时则该 tick 的指令全部作废。脚本无法访问网络、存储与全局对象，<code>eval</code>/<code>Function</code> 被禁用。</p>
+   <p class="dim">非官方项目，与 Screeps Arena 开发商无关。</p></div></section>
+ </main>
+ <nav class="tabs"><button data-v="play" class="on"><span>⚔</span>对局</button><button data-v="code"><span>{ }</span>代码</button><button data-v="more"><span>⋯</span>更多</button></nav>
+</div>
+<script src="version.js"></script><script src="vendor/capacitor.js"></script><script src="update.js"></script>
+<script type="module" src="app.js"></script></body></html>
