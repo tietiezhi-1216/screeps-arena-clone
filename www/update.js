@@ -1,4 +1,4 @@
-// 应用内更新：检查 GitHub Releases → 原生插件下载（带进度）→ 校验 → 系统安装器
+// 应用内更新：检查发布页 → 原生插件下载（带进度）→ 校验 → 系统安装器
 const REPO = 'tietiezhi-1216/screeps-arena-clone';
 function cmpVer(a, b) { const p = s => String(s).replace(/^v/, '').split('.').map(n => parseInt(n) || 0); const x = p(a), y = p(b); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) - (y[i] || 0); } return 0; }
 function nativePlugin(name) { const C = window.Capacitor; return C && C.isNativePlatform && C.isNativePlatform() && C.registerPlugin ? (nativePlugin[name] = nativePlugin[name] || C.registerPlugin(name)) : null; }
@@ -21,9 +21,16 @@ const Upd = {
   async start() {
     const P = nativePlugin('AppUpdater'); if (!P) { this.ui_.info('当前环境不支持应用内安装，请在安卓设备上更新'); return; }
     this.busy = true; this.ui_.downloading(0, this.apk.size);
-    const sha = (this.apk.digest || '').startsWith('sha256:') ? this.apk.digest.slice(7) : (((this.rel && this.rel.body) || '').match(/SHA-?256[^0-9a-fA-F]*([0-9a-fA-F]{64})/i) || [])[1]?.toLowerCase() || ''; // GitHub 资产摘要，或发布说明里的 SHA-256
-    try { const r = await P.download({ url: this.apk.browser_download_url, size: this.apk.size, sha256: sha }); if (!this.busy) return; this.path = r.path; this.busy = false; this.ui_.install(`下载完成，已校验${sha ? ' SHA-256' : '大小'}`); this.tryInstall(); }
+    const sha = await this.digest(); // 后台校验，不在界面显示
+    try { const r = await P.download({ url: this.apk.browser_download_url, size: this.apk.size, sha256: sha }); if (!this.busy) return; this.path = r.path; this.busy = false; this.ui_.install('下载完成'); this.tryInstall(); }
     catch (e) { if (this.busy) this.fail(e.message || String(e)); }
+  },
+  // 校验值来源：GitHub 资产 digest → 同名 .sha256 资产 → 旧版发布说明（兼容）
+  async digest() {
+    const d = this.apk.digest || ''; if (d.startsWith('sha256:')) return d.slice(7).toLowerCase();
+    const a = (this.rel.assets || []).find(x => x.name === this.apk.name + '.sha256' || x.name.endsWith('.apk.sha256'));
+    if (a) { try { const t = await (await fetch(a.browser_download_url)).text(); const m = t.match(/[0-9a-fA-F]{64}/); if (m) return m[0].toLowerCase(); } catch {} }
+    return ((this.rel.body || '').match(/SHA-?256[^0-9a-fA-F]*([0-9a-fA-F]{64})/i) || [])[1]?.toLowerCase() || '';
   },
   async tryInstall() {
     const P = nativePlugin('AppUpdater'); this.ui_.install();

@@ -1,4 +1,4 @@
-// 积木页布局对齐 DESIGN.md「Editor layout」：满屏工作区、左上 32×32 按钮列（间距 6）、底部分类栏高 37、无滚动条
+// 积木页布局（v0.10.4 分类栏内缩）对齐 DESIGN.md「Editor layout」：满屏工作区、左上 32×32 按钮列（间距 6）、底部分类栏高 37、无滚动条
 import test from 'node:test'; import assert from 'node:assert/strict'; import fs from 'node:fs'; import http from 'node:http'; import path from 'node:path';
 const CHROME = process.env.CHROME || '/usr/bin/google-chrome';
 let puppeteer = null; try { puppeteer = (await import('puppeteer-core')).default; } catch {}
@@ -22,7 +22,9 @@ for (const [w, h] of [[915, 412], [412, 915]]) test(`editor layout ${w}x${h}`, {
       const vis = [...document.querySelectorAll('#blocklyDiv .blocklyScrollbarHorizontal,#blocklyDiv .blocklyScrollbarVertical')].some(e => getComputedStyle(e).display !== 'none');
       return { ws: r('#blocklyDiv'), tabs: r('#edTabs'), btn: { w: btns[0].width, h: btns[0].height, x: btns[0].left, y: btns[0].top, gap: btns[1].top - btns[0].bottom }, cat: r('#cats button'), done: r('#edDone'), bord: getComputedStyle(document.querySelector('#blocklyDiv')).borderTopWidth, vis, header: !!document.querySelector('#editor .edbar'), empty: document.querySelector('#edEmpty').textContent }; });
     assert.deepEqual([m.ws.x, m.ws.y, m.ws.w, m.ws.h], [0, 0, w, h - 37]);
-    assert.equal(m.tabs.h, 37); assert.equal(m.tabs.y, h - 37);
+    assert.equal(m.tabs.h, 45); assert.equal(m.tabs.y, h - 45);
+    // 分类栏两端/底部内缩，避开圆角与手势横条（含「完成」）
+    assert.ok(m.cat.x >= 16, '左端内缩 ' + m.cat.x); assert.ok(m.done.x + m.done.w <= w - 16, '完成右端内缩'); assert.ok(m.done.y + m.done.h <= h - 12, '底部留白');
     assert.deepEqual([m.btn.w, m.btn.h, m.btn.x, m.btn.y, m.btn.gap], [32, 32, 8, 8, 6]);
     assert.equal(m.cat.h, 28); assert.equal(m.done.h, 28);
     assert.equal(m.bord, '0px'); assert.equal(m.vis, false); assert.equal(m.header, false); assert.equal(m.empty, '点下方分类添加积木');

@@ -191,7 +191,7 @@ input:focus{border-color:var(--acc)}
 #edTools button{width:32px;height:32px;border-radius:6px;background:#2a2f3a;border:0;color:#fff;padding:0}
 #edTools button .ic{font-size:18px}#edTools button:disabled .ic{color:#ffffff59}
 #edEmpty{position:absolute;left:0;right:0;top:50%!important;transform:translateY(-50%);font-size:13px!important;line-height:20px;color:#8a8f99!important;opacity:.55!important;pointer-events:none;text-align:center}
-#edTabs{position:absolute;left:0;right:0;bottom:0;box-sizing:content-box;height:36px;display:flex;align-items:center;gap:6px;padding:4px calc(6px + var(--sar)) calc(4px + var(--sab)) calc(6px + var(--sal));border-top:1px solid #333;background:var(--panel);box-sizing:border-box;height:calc(37px + var(--sab))}
+#edTabs{position:absolute;left:0;right:0;bottom:0;box-sizing:content-box;height:36px;display:flex;align-items:center;gap:6px;padding:4px calc(16px + var(--sar)) calc(12px + var(--sab)) calc(16px + var(--sal));border-top:1px solid #333;background:var(--panel);box-sizing:border-box;height:calc(45px + var(--sab))} /* 两端+16、底部+12：避开手机圆角和手势横条 */
 #edTabs #cats{order:0;flex:1;min-width:0;display:flex;gap:6px;padding:0!important;border:0!important;background:none;overflow-x:auto!important;scrollbar-width:none}
 #edTabs #cats::-webkit-scrollbar{display:none}
 #edTabs #cats button{flex:0 0 auto;height:28px!important;padding:0 8px;font-size:12px;border-radius:4px;box-shadow:none}

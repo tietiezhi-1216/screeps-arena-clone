@@ -11,7 +11,9 @@
       .replace(/\*\*([^*]+)\*\*|__([^_]+)__/g, (m, a, b) => '<b>' + (a || b) + '</b>').replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<i>$2</i>').replace(/~~([^~]+)~~/g, '<s>$1</s>');
     return s.replace(/\u0000(\d+)\u0000/g, (m, i) => '<code>' + codes[i] + '</code>');
   }
+  const TECH = /SHA-?256|sha256|校验值|校验和|checksum|\b[0-9a-f]{40,64}\b/i; // 哈希等技术信息不展示给玩家
   function md(src) {
+    src = String(src || '').replace(/\r/g, '').split('\n').filter(l => !TECH.test(l)).join('\n');
     const out = []; let list = null, para = [], code = null;
     const flushP = () => { if (para.length) out.push('<p>' + inline(para.join(' ')) + '</p>'); para = []; };
     const flushL = () => { if (list) out.push(`<${list.t}>` + list.items.map(x => '<li>' + inline(x) + '</li>').join('') + `</${list.t}>`); list = null; };

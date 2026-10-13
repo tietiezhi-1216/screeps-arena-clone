@@ -272,4 +272,3 @@ $('#goReplays').onclick = async () => { go('replays'); const all = ((await tx('r
   $('#rlist').innerHTML = all.length ? '' : '<div class="empty">还没有回放</div>';
   for (const r of all) { const b = document.createElement('button'); b.className = 'item'; const w = r.result?.winner; b.innerHTML = `<div class="it"><div class="in">${name(r.mode)}</div><div class="is"><span class="tag">${!w ? '平局' : w === 'p1' ? '胜' : '负'}</span>${esc(r.script || '')} ${dt(r.id)}</div></div>`;
     b.onclick = () => { state.vs = 'replay'; go('match'); $('#busy').classList.add('hidden'); setReplay(r.data); }; $('#rlist').append(b); } };
-window.__sa = { spawnAt: () => { const o = replay?.frames[frame].objs.find(o => o.t === 'StructureSpawn' && o.o === 'p1'); return o && { x: view.x + (o.x + .5) * TS * view.s, y: view.y + (o.y + .5) * TS * view.s }; } }; // 截图/调试用
