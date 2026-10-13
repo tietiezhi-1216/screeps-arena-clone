@@ -21,6 +21,11 @@ test('no SHA / GitHub / developer strings in rendered UI', { skip, timeout: 6000
     assert.equal(await pg.evaluate(() => '__sa' in window), false);
     await pg.evaluate(() => window.manualCheckUpdate()); await new Promise(r => setTimeout(r, 400));
     const t = await pg.$eval('.uu', e => e.innerText);
+    const c = await pg.evaluate(() => UpdateUI.clean('## 新功能\n- 好\n- 见 GitHub\n- 提交 abc\n## 安装包校验\n- x\n### 子节\n- y\n## 修复\n- 修好了\n- checksum: 1\n- 文件 a.apk.sha256\n- 哈希 z'));
+    assert.equal(c, '## 新功能\n- 好\n## 修复\n- 修好了');
+    for (const [err, want] of [['SHA-256 校验失败', '安装包不完整，请重试'], ['文件大小不符：1 ≠ 2', '安装包不完整，请重试'], ['下载失败：HTTP 404', '下载失败，请检查网络后重试']]) assert.equal(await pg.evaluate(m => UpdateUI.friendly(new Error(m)), err), want);
+    await pg.evaluate(() => { window.fetch = () => Promise.resolve(new Response('', { status: 503 })); }); await pg.evaluate(() => window.manualCheckUpdate());
+    assert.equal(await pg.$eval('#chkUpdV', e => e.textContent), '检查更新失败，请检查网络后重试');
     assert.match(t, /好玩的改动/); assert.doesNotMatch(t, BAD, '更新弹窗');
   } finally { await b.close(); srv.close(); }
 });

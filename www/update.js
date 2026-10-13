@@ -23,7 +23,7 @@ const Upd = {
     this.busy = true; this.ui_.downloading(0, this.apk.size);
     const sha = await this.digest(); // 后台校验，不在界面显示
     try { const r = await P.download({ url: this.apk.browser_download_url, size: this.apk.size, sha256: sha }); if (!this.busy) return; this.path = r.path; this.busy = false; this.ui_.install('下载完成'); this.tryInstall(); }
-    catch (e) { if (this.busy) this.fail(e.message || String(e)); }
+    catch (e) { if (this.busy) this.fail(UpdateUI.friendly(e)); }
   },
   // 校验值来源：GitHub 资产 digest → 同名 .sha256 资产 → 旧版发布说明（兼容）
   async digest() {
@@ -38,7 +38,7 @@ const Upd = {
       const { allowed } = await P.canInstall();
       if (!allowed) { this.waitingPerm = true; this.ui_.info('请在设置里允许“安装未知应用”，返回后会自动继续安装'); await P.openInstallSettings(); return; }
       this.waitingPerm = false; await P.install({ path: this.path }); this.ui_.info('已打开系统安装器，按提示点“更新”即可');
-    } catch (e) { this.fail(e.message || String(e)); }
+    } catch (e) { this.fail(UpdateUI.friendly(e)); }
   },
 };
 async function checkUpdate(manual) {
@@ -50,7 +50,7 @@ async function checkUpdate(manual) {
       // 自动检查发现新版本：直接在游戏内弹窗（同一版本「稍后」后本次运行不再打扰，下次启动再提示）
       if (manual || (checkUpdate.shown !== rel.tag_name && !Upd.busy && (!Upd.el || Upd.el.classList.contains('hidden')))) { checkUpdate.shown = rel.tag_name; Upd.show(rel, apk, cur); } return 'new'; }
     else { window.UPDATE_REL = null; updBadge(false); rowVal(manual === true ? '已是最新版本' : ''); return 'latest'; }
-  } catch (e) { rowVal(manual === true ? '检查失败，请稍后重试' : ''); return 'fail'; }
+  } catch (e) { rowVal(manual === true ? '检查更新失败，请检查网络后重试' : ''); return 'fail'; }
 }
 // 有新版本时在菜单按钮 / 检查更新 / 设置入口上显示蓝点（不打断游戏）
 function updBadge(on) {

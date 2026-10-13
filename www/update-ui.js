@@ -11,9 +11,15 @@
       .replace(/\*\*([^*]+)\*\*|__([^_]+)__/g, (m, a, b) => '<b>' + (a || b) + '</b>').replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<i>$2</i>').replace(/~~([^~]+)~~/g, '<s>$1</s>');
     return s.replace(/\u0000(\d+)\u0000/g, (m, i) => '<code>' + codes[i] + '</code>');
   }
-  const TECH = /SHA-?256|sha256|校验值|校验和|checksum|\b[0-9a-f]{40,64}\b/i; // 哈希等技术信息不展示给玩家
+  const TECH = /SHA-?256|\.sha256|校验|哈希|checksum|[0-9a-f]{40,64}|github|commit|提交/i; // 玩家界面不出现开发者信息（DESIGN.md）
+  // 去掉含技术词的行；标题含这些词的小节整节去掉
+  function clean(src) { const out = []; let skip = 0;
+    for (const l of String(src || '').replace(/\r/g, '').split('\n')) { const h = l.match(/^\s{0,3}(#{1,6})\s/);
+      if (h) { if (skip && h[1].length > skip) continue; skip = TECH.test(l) ? h[1].length : 0; if (skip) continue; } else if (skip) continue;
+      if (!TECH.test(l)) out.push(l); }
+    return out.join('\n'); }
   function md(src) {
-    src = String(src || '').replace(/\r/g, '').split('\n').filter(l => !TECH.test(l)).join('\n');
+    src = clean(src);
     const out = []; let list = null, para = [], code = null;
     const flushP = () => { if (para.length) out.push('<p>' + inline(para.join(' ')) + '</p>'); para = []; };
     const flushL = () => { if (list) out.push(`<${list.t}>` + list.items.map(x => '<li>' + inline(x) + '</li>').join('') + `</${list.t}>`); list = null; };
@@ -55,5 +61,7 @@
     };
     return ui;
   }
-  G.UpdateUI = { create, md };
+  // 原生错误 → 玩家能看懂的话（不显示 HTTP 码 / 哈希）
+  const friendly = e => { const m = String((e && e.message) || e); return /SHA|校验|大小不符|不完整/i.test(m) ? '安装包不完整，请重试' : /^无法|安装包不存在/.test(m) ? '无法安装，请重试' : '下载失败，请检查网络后重试'; };
+  G.UpdateUI = { create, md, clean, friendly };
 })(window);
