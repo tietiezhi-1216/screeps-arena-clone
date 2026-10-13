@@ -187,6 +187,7 @@ export class World {
       if (o instanceof P.Creep) { s.b = o.body.map(p => p.type[0] + (p.hits > 0 ? '' : '!')).join(','); if (o.spawning) s.sp = 1; s.f = o.fatigue; }
       if (o instanceof P.Source) { s.e = o.energy; s.c = o.energyCapacity; }
       if (o instanceof P.Resource) s.e = o.amount;
+      if (o instanceof P.BodyPart) s.bt = o.type;
       if (o instanceof P.ConstructionSite) { s.st = o._proto.name; s.p = o.progress; s.pt = o.progressTotal; }
       if (o instanceof P.StructureSpawn && o.spawning) s.spn = [o.spawning.needTime - o.spawning.remainingTime, o.spawning.needTime];
       objs.push(s);

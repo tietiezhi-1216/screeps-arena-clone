@@ -92,7 +92,7 @@ export class PlayerRuntime {
   constructor(world, pid, source, { compile = defaultCompile, hardRun } = {}) {
     this.world = world; this.pid = pid; this.error = null; this.logs = []; this.cpu = { used: 0, limit: 0, start: 0, tripped: false }; this.ticks = 0; this.hardRun = hardRun;
     const mods = modulesFor(world, pid);
-    const require = m => { if (!(m in mods)) throw new Error(`Cannot find module '${m}'`); return mods[m]; };
+    const require = m => { if (/^arena(\/|$)/.test(m)) return mods.arena; if (!(m in mods)) throw new Error(`Cannot find module '${m}'`); return mods[m]; };
     const console = { log: (...a) => { if (this.logs.length < 200) this.logs.push(a.map(x => typeof x === 'string' ? x : safeJson(x)).join(' ').slice(0, 1000)); } };
     console.error = console.warn = console.info = console.debug = console.log;
     const cpu = this.cpu; this._chk = () => { if (cpu.tripped || now() - cpu.start > cpu.limit) { cpu.tripped = true; throw new CpuLimitError(); } };

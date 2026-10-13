@@ -1,23 +1,27 @@
 import { TS, N, terrainCanvas, drawFrame } from './render.js';
 import { transformModule } from './src/engine/sandbox.js';
+import { HostSession, ClientSession, nativeTransport, LAN_PORT } from './src/net/lan.js';
+import * as K from './src/constants.js';
+import { PROTOTYPES } from './src/engine/prototypes.js';
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
-const BOTS = { 'rush（近战冲锋）': 'bots/rush.mjs', 'kite（远程风筝）': 'bots/kite.mjs', '空白模板': null };
+const BOTS = { 'rush（近战冲锋）': 'bots/rush.mjs', 'kite（远程风筝）': 'bots/kite.mjs', 'ctf（夺旗）': 'bots/ctf.mjs', '空白模板': null };
 const BLANK = `import { getObjectsByPrototype } from 'game/utils';\nimport { Creep, StructureSpawn } from 'game/prototypes';\nimport { MOVE, ATTACK, ERR_NOT_IN_RANGE } from 'game/constants';\n\nexport function loop() {\n  const spawn = getObjectsByPrototype(StructureSpawn).find(s => s.my);\n  \n}\n`;
 $('#ver').textContent = 'v' + (window.APP_VERSION || 'dev');
 
 // ---------- 导航 ----------
-const show = v => { $$('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === v)); $$('.view').forEach(e => e.classList.toggle('on', e.id === 'v-' + v)); if (v === 'play') resize(); if (v === 'code') fitEditor(); };
+const show = v => { if (v === 'code' && edModes?.[cur] === 'blocks') setTimeout(() => blocks?.resize(), 0); $$('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === v)); $$('.view').forEach(e => e.classList.toggle('on', e.id === 'v-' + v)); if (v === 'play') resize(); if (v === 'code') fitEditor(); };
 $$('.tabs button').forEach(b => b.onclick = () => show(b.dataset.v));
 
 // ---------- 代码编辑器（移动端友好：快捷符号键、代码片段、字号、语法检查） ----------
 const ta = $('#code'), codes = [localStorage.code0, localStorage.code1]; let cur = 0;
 async function loadTpl(i, name) { codes[i] = BOTS[name] ? await (await fetch(BOTS[name])).text() : BLANK; localStorage['code' + i] = codes[i]; if (i === cur) setCode(); }
 function setCode() { ta.value = codes[cur] || ''; fitEditor(); }
-function fitEditor() { const n = ta.value.split('\n').length; $('#gutter').textContent = Array.from({ length: n }, (_, i) => i + 1).join('\n'); ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; ta.style.width = 'auto'; ta.style.minWidth = ta.scrollWidth + 'px'; }
+function fitEditor() { $('#hl').innerHTML = highlight(ta.value) + '\n'; const n = ta.value.split('\n').length; $('#gutter').textContent = Array.from({ length: n }, (_, i) => i + 1).join('\n'); ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; ta.style.width = 'auto'; ta.style.minWidth = ta.scrollWidth + 'px'; }
 for (const k in BOTS) $('#tpl').add(new Option(k, k)); $('#tpl').selectedIndex = 0;
-$('#tpl').onchange = () => { if (confirm(`用「${$('#tpl').value}」替换玩家 ${cur + 1} 的代码？`)) loadTpl(cur, $('#tpl').value); $('#tpl').selectedIndex = 0; };
-$$('.seg button').forEach(b => b.onclick = () => { cur = +b.dataset.p; $$('.seg button').forEach(x => x.classList.toggle('on', x === b)); setCode(); });
-ta.oninput = () => { codes[cur] = ta.value; localStorage['code' + cur] = ta.value; fitEditor(); };
+$('#tpl').onchange = () => { if (confirm(`用「${$('#tpl').value}」替换玩家 ${cur + 1} 的代码？`)) { edModes[cur] = localStorage['ed' + cur] = 'text'; loadTpl(cur, $('#tpl').value).then(setEdMode); } $('#tpl').selectedIndex = 0; };
+$$('.seg:not(#edMode) button').forEach(b => b.onclick = () => { cur = +b.dataset.p; $$('.seg:not(#edMode) button').forEach(x => x.classList.toggle('on', x === b)); setCode(); });
+ta.oninput = () => { codes[cur] = ta.value; localStorage['code' + cur] = ta.value; fitEditor(); suggest(); };
+ta.onkeyup = ta.onclick = () => suggest();
 function insert(text, back = 0) { ta.focus(); ta.setRangeText(text, ta.selectionStart, ta.selectionEnd, 'end'); if (back) ta.selectionStart = ta.selectionEnd = ta.selectionEnd - back; ta.oninput(); }
 ta.onkeydown = e => { if (e.key === 'Tab') { e.preventDefault(); insert('  '); } else if (e.key === 'Enter') { e.preventDefault(); const line = ta.value.slice(0, ta.selectionStart).split('\n').pop(); const ind = line.match(/^\s*/)[0] + (/[{(\[]\s*$/.test(line) ? '  ' : ''); insert('\n' + ind); } };
 const KEYS = [['⇥', '  '], ['{', '{}', 1], ['}', '}'], ['(', '()', 1], [')', ')'], ['[', '[]', 1], [']', ']'], [';', ';'], ['.', '.'], [',', ', '], ['=', ' = '], ['=>', ' => '], ["'", "''", 1], ['!', '!'], ['<', ' < '], ['>', ' > '], ['&&', ' && '], ['||', ' || '], ['===', ' === ']];
@@ -26,12 +30,57 @@ const SNIPS = [['spawnCreep', "spawn.spawnCreep([MOVE, ATTACK]);"], ['我的 cre
   ['for creep', "for (const creep of mine) {\n  \n}", 2], ['attack/moveTo', "if (creep.attack(target) === ERR_NOT_IN_RANGE) creep.moveTo(target);"], ['rangedAttack', "if (creep.rangedAttack(target) === ERR_NOT_IN_RANGE) creep.moveTo(target);"],
   ['withdraw', "if (creep.withdraw(container, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) creep.moveTo(container);"], ['transfer', "if (creep.transfer(spawn, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) creep.moveTo(spawn);"],
   ['findClosestByPath', "const t = creep.findClosestByPath(enemies);"], ['getTicks', "getTicks()"], ['console.log', "console.log();", 2]];
-for (const [l, t, b] of SNIPS) { const k = document.createElement('button'); k.textContent = l; k.onpointerdown = e => e.preventDefault(); k.onclick = () => insert(t, b); $('#snips').append(k); }
+for (const [l, t, b] of SNIPS) { const k = document.createElement('button'); k.className = 'snip'; k.textContent = l; k.onpointerdown = e => e.preventDefault(); k.onclick = () => insert(t, b); $('#snips').append(k); }
+// ---- 语法高亮（透明 textarea 叠在高亮层上） ----
+const KW = new Set('import export from function const let var if else for while do return break continue new of in true false null undefined this typeof instanceof try catch finally throw class extends switch case default async await'.split(' '));
+const API_WORDS = [...Object.keys(K), ...Object.keys(PROTOTYPES), 'BodyPart', 'getObjectsByPrototype', 'getObjectById', 'getObjects', 'getTicks', 'getRange', 'getDirection', 'getTerrainAt', 'getCpuTime', 'findInRange', 'findClosestByRange', 'findClosestByPath', 'findPath', 'createConstructionSite', 'searchPath', 'CostMatrix', 'Visual', 'arenaInfo',
+  'spawnCreep', 'moveTo', 'move', 'attack', 'rangedAttack', 'rangedMassAttack', 'heal', 'rangedHeal', 'harvest', 'build', 'transfer', 'withdraw', 'pickup', 'drop', 'pull', 'getRangeTo', 'findPathTo', 'store', 'body', 'hits', 'hitsMax', 'fatigue', 'spawning', 'my', 'exists', 'ticksToDecay', 'getFreeCapacity', 'getUsedCapacity', 'getCapacity', 'console', 'log', 'filter', 'find', 'forEach', 'some', 'length', 'Math'];
+const APISET = new Set(API_WORDS);
+const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+function highlight(src) {
+  return src.replace(/(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|('(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"|`(?:\\.|[^`\\])*`)|(\b\d+(?:\.\d+)?\b)|([A-Za-z_$][\w$]*)(\s*\()?|([&<>])/g, (m, c, str, num, id, call, ch) => {
+    if (c) return `<span class="c">${esc(c)}</span>`; if (str) return `<span class="s">${esc(str)}</span>`; if (num) return `<span class="n">${num}</span>`;
+    if (ch) return esc(ch);
+    const cls = KW.has(id) ? 'k' : /^[A-Z][A-Z0-9_]+$/.test(id) ? 'x' : APISET.has(id) ? 'a' : call ? 'f' : '';
+    return (cls ? `<span class="${cls}">${id}</span>` : id) + (call || '');
+  });
+}
+// ---- 自动补全：输入时在片段条显示候选，点按替换当前前缀 ----
+function suggest() {
+  const pre = ta.value.slice(0, ta.selectionStart).match(/[A-Za-z_$][\w$]*$/)?.[0] || '';
+  const bar = $('#snips'); bar.querySelectorAll('.sug').forEach(b => b.remove()); bar.querySelectorAll('.snip').forEach(b => b.classList.toggle('hidden', !!pre));
+  if (!pre) return;
+  const words = new Set([...API_WORDS, ...(ta.value.match(/[A-Za-z_$][\w$]{2,}/g) || [])]); words.delete(pre);
+  const list = [...words].filter(w => w.toLowerCase().startsWith(pre.toLowerCase())).sort((a, b) => APISET.has(b) - APISET.has(a) || a.length - b.length).slice(0, 12);
+  for (const w of list.reverse()) { const k = document.createElement('button'); k.className = 'sug'; k.textContent = w; k.onpointerdown = e => e.preventDefault();
+    k.onclick = () => { const p = ta.selectionStart; ta.setRangeText(w, p - pre.length, p, 'end'); ta.oninput(); }; bar.prepend(k); }
+}
 let fs = +localStorage.fs || 14; const setFs = d => { fs = Math.max(10, Math.min(24, fs + d)); localStorage.fs = fs; document.documentElement.style.setProperty('--fs', fs + 'px'); fitEditor(); }; setFs(0);
 $('#fsm').onclick = () => setFs(-1); $('#fsp').onclick = () => setFs(1);
 function check(i) { try { transformModule(codes[i] || ''); return null; } catch (e) { return `玩家 ${i + 1}：${e.message}`; } }
 $('#check').onclick = () => { const e = check(cur); $('#codeMsg').textContent = e || '✓ 语法正确'; $('#codeMsg').className = e ? 'err' : ''; };
-(async () => { for (const i of [0, 1]) if (!codes[i]) await loadTpl(i, Object.keys(BOTS)[i]); setCode(); })();
+(async () => { for (const i of [0, 1]) if (!codes[i]) await loadTpl(i, Object.keys(BOTS)[i]); setCode(); setEdMode(); })();
+// ---- 积木模式（每个玩家各自选择 文本 / 积木；积木模式下代码由积木生成） ----
+const edModes = [localStorage.ed0 || 'text', localStorage.ed1 || 'text']; let blocks = null, blocksFor = -1;
+function setEdMode() {
+  const m = edModes[cur]; $$('#edMode button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+  $('#textEd').classList.toggle('hidden', m === 'blocks'); $('#blocksEd').classList.toggle('hidden', m !== 'blocks');
+  $('#keys').classList.toggle('hidden', m === 'blocks'); $('#snips').classList.toggle('hidden', m === 'blocks');
+  if (m !== 'blocks') return setCode();
+  if (!window.ArenaBlocks) { $('#codeMsg').textContent = '积木组件未加载'; return; }
+  if (blocks && blocksFor === cur) return blocks.resize();
+  if (blocks) { blocks.ws.dispose(); $('#blocklyDiv').innerHTML = ''; }
+  let saved = null; try { saved = JSON.parse(localStorage['blocks' + cur]); } catch (e) {}
+  const me = cur; blocksFor = cur;
+  blocks = ArenaBlocks.create($('#blocklyDiv'), saved, (code, state) => { codes[me] = code; localStorage['code' + me] = code; localStorage['blocks' + me] = JSON.stringify(state); });
+  if (!$('#catbar').children.length) for (const c of ArenaBlocks.CATS) { const b = document.createElement('button'); b.textContent = c.name; b.style.setProperty('--c', c.colour); b.onclick = () => blocks.openCat(c.id); $('#catbar').append(b); }
+  setTimeout(() => blocks.resize(), 0);
+}
+$$('#edMode button').forEach(b => b.onclick = () => {
+  const m = b.dataset.m; if (m === edModes[cur]) return;
+  if (m === 'blocks' && !confirm('切换到积木模式后，代码将由积木生成（当前文本代码会被覆盖，可随时切回文本继续手改）。继续？')) return;
+  edModes[cur] = m; localStorage['ed' + cur] = m; if (m === 'blocks') blocksFor = -1; setEdMode(); });
+$$('.seg:not(#edMode) button').forEach(b => b.addEventListener('click', () => setEdMode()));
 
 // ---------- 对局 ----------
 let worker, watchdog;
@@ -67,9 +116,9 @@ cv.onpointerup = up; cv.onpointercancel = up;
 cv.onwheel = e => { e.preventDefault(); const p = { x: e.offsetX, y: e.offsetY }; zoomAt(view, p, p, e.deltaY < 0 ? 1.15 : 1 / 1.15); draw(); };
 
 // ---------- 回放 ----------
-let replay = null, terr = null, frame = 0, playing = false, acc = 0, last = 0, sel = null, sheet = 'inspect';
+let live = false, replay = null, terr = null, frame = 0, playing = false, acc = 0, last = 0, sel = null, sheet = 'inspect';
 const speeds = [0.5, 1, 2, 4, 8, 16, 32]; let si = 1;
-function setReplay(r) { replay = r; terr = terrainCanvas(r.terrain); frame = 0; $('#scrub').max = r.frames.length - 1; $('#status').textContent = `完成 · ${r.meta.ticks} tick`; $('#empty').classList.add('hidden'); fitted = false; resize(); }
+function setReplay(r) { live = false; replay = r; terr = terrainCanvas(r.terrain); frame = 0; $('#scrub').max = r.frames.length - 1; $('#status').textContent = `完成 · ${r.meta.ticks} tick`; $('#empty').classList.add('hidden'); fitted = false; resize(); }
 const updPlay = () => $('#play').textContent = playing ? '❚❚' : '▶';
 $('#play').onclick = () => { if (!replay) return startMatch(); if (frame >= replay.frames.length - 1) frame = 0; playing = !playing; updPlay(); };
 $('#step').onclick = () => { if (!replay) return; playing = false; updPlay(); frame = Math.min(replay.frames.length - 1, frame + 1); draw(); };
@@ -101,6 +150,50 @@ function draw(k = 1) {
   else $('#sheetBody').textContent = replay.frames.slice(Math.max(0, frame - 40), frame + 1).flatMap(fr => (fr.log?.[sheet] || []).map(l => `[${fr.tick - 1}] ${l}`)).join('\n') || '（无输出）';
 }
 function raf(t) { const dt = Math.min(100, t - last); last = t;
-  if (replay && playing) { if (frame < replay.frames.length - 1) { acc += dt * speeds[si] / 200; while (acc >= 1 && frame < replay.frames.length - 1) { acc--; frame++; } draw(Math.min(1, acc)); } else { playing = false; updPlay(); } }
+  if (replay && playing) { if (frame < replay.frames.length - 1) { acc += dt * speeds[si] / 200; while (acc >= 1 && frame < replay.frames.length - 1) { acc--; frame++; } draw(Math.min(1, acc)); } else if (!live) { playing = false; updPlay(); } }
   else if (pts.size) {} requestAnimationFrame(raf); }
 requestAnimationFrame(raf); setTimeout(resize, 0);
+
+// ---------- 局域网联机 ----------
+let lanHost = null, lanClient = null, liveWorker = null;
+$('#nick').value = localStorage.nick || ''; $('#nick').onchange = () => localStorage.nick = $('#nick').value;
+const nick = () => $('#nick').value.trim() || '玩家';
+const pid = localStorage.pid || (localStorage.pid = 'u' + Math.random().toString(36).slice(2, 10));
+const lanUi = (on, host) => { $('#lanStart').classList.toggle('hidden', !host); $('#lanSend').classList.toggle('hidden', !on || host); $('#lanLeave').classList.toggle('hidden', !on); };
+const showLobby = ps => $('#lobby').textContent = ps.map(p => `${p.slot === 'p1' ? '🔵 玩家 1' : p.slot === 'p2' ? '🔴 玩家 2' : '👁 观战'}  ${p.name}${p.slot === 'p2' ? (p.hasCode ? '（代码已就绪）' : '（等待代码）') : ''}`).join('\n');
+function liveBegin(st) { live = true; replay = { meta: st.meta, terrain: st.terrain, frames: [st.first] }; terr = terrainCanvas(st.terrain); frame = 0; $('#scrub').max = 0; playing = true; updPlay(); $('#empty').classList.add('hidden'); fitted = false; show('play'); resize(); }
+function liveFrame(f) { if (!replay) return; replay.frames.push(f); $('#scrub').max = replay.frames.length - 1; if (frame >= replay.frames.length - 3) si = Math.max(si, 1); $('#status').textContent = `联机 · tick ${f.tick - 1}`; }
+function liveEnd() { live = false; $('#status').textContent = '联机对局结束'; replay.meta.result = replay.frames.at(-1).result; }
+$('#hostBtn').onclick = async () => {
+  const t = nativeTransport(); if (!t) return alert('开房需要安卓 App（浏览器无法监听端口）');
+  let r; try { r = await t.plugin.start({ port: LAN_PORT, name: nick() }); } catch (e) { return alert('开房失败：' + e.message); }
+  lanHost = new HostSession(t, { name: nick() }); lanHost.onLobby = showLobby; lanHost.lobby(); lanUi(true, true);
+  $('#hosts').textContent = `房间已开：${(r.ips || []).join(' / ')} 端口 ${LAN_PORT}`;
+};
+$('#lanStart').onclick = () => {
+  const guest = lanHost?.guestCode(); if (guest == null) return alert('还没有玩家 2 加入'); if (!guest) return alert('玩家 2 还没发送代码');
+  const err = [0].map(check).filter(Boolean); if (err.length) return alert(err[0]);
+  liveWorker?.terminate(); liveWorker = new Worker('worker.js', { type: 'module' });
+  liveWorker.onmessage = e => { const d = e.data;
+    if (d.start) { lanHost.start(d.start.meta, d.start.terrain, d.start.first); liveBegin(d.start); }
+    if (d.frame) { lanHost.tick(d.frame); liveFrame(d.frame); }
+    if (d.end) { lanHost.end(d.end.result); liveEnd(); liveWorker.terminate(); }
+    if (d.error) { alert(d.error); liveWorker.terminate(); } };
+  liveWorker.postMessage({ scripts: [codes[0], guest], seed: +$('#seed').value, mode: $('#mode').value, live: true, dt: 200 });
+};
+function join(addr) {
+  lanClient?.close(); const url = `ws://${addr.includes(':') ? addr : addr + ':' + LAN_PORT}`;
+  lanClient = new ClientSession(url, { pid, name: nick(), code: codes[cur] });
+  lanClient.onStatus = s => { $('#hosts').textContent = s; lanUi(s !== '连接断开' && s !== '连接失败', false); };
+  lanClient.onLobby = showLobby; lanClient.onStart = liveBegin; lanClient.onTick = liveFrame; lanClient.onEnd = liveEnd;
+}
+$('#joinBtn').onclick = () => { const ip = $('#ip').value.trim(); if (!ip) return; localStorage.ip = ip; join(ip); };
+$('#ip').value = localStorage.ip || '';
+$('#lanSend').onclick = () => { const e = check(cur); if (e) return alert(e); lanClient?.sendCode(codes[cur]); $('#hosts').textContent = `已发送玩家 ${cur + 1} 编辑器里的代码`; };
+$('#findBtn').onclick = async () => {
+  const t = nativeTransport(); if (!t) return alert('搜索需要安卓 App；也可以手动输入 IP');
+  $('#hosts').textContent = '搜索中…'; try { const r = await t.plugin.discover({ timeout: 3500 }); $('#hosts').textContent = r.hosts.length ? '' : '没找到（可手动输入 IP）';
+    for (const h of r.hosts) { const b = document.createElement('button'); b.textContent = `${h.name} · ${h.ip}`; b.onclick = () => { $('#ip').value = h.ip; join(`${h.ip}:${h.port}`); }; $('#hosts').append(b); } }
+  catch (e) { $('#hosts').textContent = '搜索失败：' + e.message; }
+};
+$('#lanLeave').onclick = async () => { lanClient?.close(); lanClient = null; liveWorker?.terminate(); if (lanHost) { try { await lanHost.t.plugin.stop(); } catch (e) {} lanHost = null; } lanUi(false, false); $('#lobby').textContent = ''; $('#hosts').textContent = '已断开'; };

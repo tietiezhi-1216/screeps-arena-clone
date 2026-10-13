@@ -46,3 +46,12 @@ export function createMatch({ seed = 1, players = ['p1', 'p2'], config = {} } = 
   });
   return w;
 }
+
+// 高级版：在基础版之上，每方家门口加 2 个 Source（可采集），开放建造（Extension / Tower / Rampart / Wall / Road / Container）。
+// 能量来源以 Source 为主，中场容器刷新保留；数值规则用官方常量，地图布局为近似实现。
+export function createAdvanced({ seed = 1, players = ['p1', 'p2'], config = {} } = {}) {
+  const w = createMatch({ seed, players, config: { homeContainerEnergy: 300, ...config } });
+  w.arena.name = 'Spawn and Swamp'; w.arena.level = 2;
+  SPAWNS.forEach((s, i) => [[3, -3], [3, 3]].forEach(([dx, dy]) => w.add(new P.Source(w, s.x + (i ? -dx : dx), s.y + dy, 1000, 1000))));
+  return w;
+}

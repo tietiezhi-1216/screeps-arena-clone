@@ -8,7 +8,7 @@
 
 **安卓手机游戏**（Capacitor 6），竖屏/横屏均可。下载：[Releases](../../releases/latest) 里的 `screeps-arena-v*.apk`；应用启动时会自动检查新版本并在应用内更新。
 
-![mobile](docs/img/mobile.png)
+![mobile](docs/img/mobile-v3.png)
 
 ## 开发
 ```bash
@@ -28,6 +28,15 @@ APP_VERSION=0.2.0 VERSION_CODE=20 ./scripts/build-android.sh   # JDK17 / Android
 - 底部导航（横屏时变为左侧竖栏）：对局 / 代码 / 更多。
 - 地图：双指缩放、单指拖动、点对象弹出详情面板；回放控制条（播放/单步/倍速/拖动）、P1/P2 控制台。
 - 代码编辑器：行号、自动缩进、符号快捷键条、常用 API 代码片段、字号调节、提交前语法检查、示例模板。
+
+## 积木编程
+代码页每个玩家可切换「文本 / 积木」。积木做法沿用 screeps-blockly-mobile（Blockly 11、zelos 渲染、顶部分类条、点按添加），提供 查找 / 动作 / 出兵 / 属性 等 Arena 专用积木，生成标准 Arena ES 模块代码（`import … from 'game/…'` + `export function loop()`）。
+
+## 文本编辑器
+语法高亮（关键字 / 字符串 / 数字 / 注释 / 常量 / Arena API）、输入时按前缀自动补全（API 名 + 文档内标识符，点按替换）、符号键条、片段、字号、语法检查。
+
+## 局域网联机
+「更多」页：一台 🏠 开房（玩家 1），其他手机 🔍 搜索或输入 IP 加入；第一个加入者是玩家 2，发送自己的代码，其余观战。房主在 Worker 里权威模拟，每 200 ms 一个 tick 广播给所有人。原生层复用队友的 LanServer 插件（NanoHTTPD WebSocket + UDP 广播），端口 8797 / 发现 8798，与 Screeps World 不冲突。协议见 `src/net/lan.js`。
 
 ## 沙盒与 CPU 限制
 - 每 tick `cpuTimeLimit` 50 ms，首 tick `cpuTimeLimitFirstTick` 1000 ms（官方值）。用 acorn 解析脚本，在每个循环体和函数入口插入检查点；超时即中止该 tick，并作废该玩家本 tick 的全部指令。
@@ -50,8 +59,11 @@ export function loop() {
 ```
 已实现的 API 见 [docs/API.md](docs/API.md)。
 
-## 当前模式：Spawn and Swamp（基础版）
-- 100×100 地图、大片沼泽、左右镜像对称；双方各一个 Spawn（初始 500 能量）+ 3 个家门口容器。
+## 模式
+- **Capture the Flag（基础）**：对角两角各 1 旗 + 2 塔 + 14 个预置 creep，无 Spawn；踩上敌旗获胜，全灭对方也获胜。中部周期性掉落 `BodyPart`（`import { BodyPart } from 'arena/season_2/capture_the_flag/basic'`），踩上去即加装该部件。creep 具体身体、地图、掉落频率、塔充能为近似实现。
+- **Spawn and Swamp（高级）**：基础版 + 每方 2 个 Source，可建造 Extension/Tower/Rampart/Wall/Road/Container。
+- **Spawn and Swamp（基础）**：
+  - 100×100 地图、大片沼泽、左右镜像对称；双方各一个 Spawn（初始 500 能量）+ 3 个家门口容器。
 - 每 50 tick 在中场镜像刷出一对带能量的中立容器。
 - 摧毁对方 Spawn 获胜；2000 tick 未分胜负判平局。
 - 地图生成与容器刷新规律是近似实现（官方未公开），所有数值规则来自官方常量。

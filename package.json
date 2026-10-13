@@ -5,7 +5,7 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "test": "node --test test/",
+    "test": "node --test test/*.test.mjs",
     "start": "node scripts/serve.mjs 8080",
     "match": "node scripts/run-match.mjs bots/rush.mjs bots/kite.mjs"
   },
@@ -14,7 +14,9 @@
     "@capacitor/browser": "^6.0.6",
     "@capacitor/core": "^6.2.2",
     "acorn": "^8.19.0",
-    "capacitor-app-updater": "file:plugins/capacitor-app-updater"
+    "blockly": "^11.2.2",
+    "capacitor-app-updater": "file:plugins/capacitor-app-updater",
+    "capacitor-lan-server": "file:plugins/capacitor-lan-server"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.2.2"

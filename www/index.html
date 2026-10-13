@@ -15,14 +15,22 @@
   </section>
   <section id="v-code" class="view">
    <div class="code-top"><div class="seg"><button data-p="0" class="on"><i class="dot p1"></i>玩家 1</button><button data-p="1"><i class="dot p2"></i>玩家 2</button></div>
-    <select id="tpl"><option value="" disabled selected hidden>模板…</option></select><button id="fsm">A−</button><button id="fsp">A+</button><button id="check">✓ 检查</button></div>
-   <div class="editor"><pre id="gutter"></pre><textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea></div>
+    <div class="seg" id="edMode"><button data-m="text" class="on">文本</button><button data-m="blocks">积木</button></div><select id="tpl"><option value="" disabled selected hidden>模板…</option></select><button id="fsm">A−</button><button id="fsp">A+</button><button id="check">✓ 检查</button></div>
+   <div class="editor" id="textEd"><pre id="gutter"></pre><div class="ed-wrap"><pre id="hl" aria-hidden="true"></pre><textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea></div></div>
+   <div id="blocksEd" class="hidden"><div class="catbar" id="catbar"></div><div id="blocklyDiv"></div></div>
    <div id="codeMsg"></div>
    <div class="snips" id="snips"></div>
    <div class="keys" id="keys"></div>
   </section>
   <section id="v-more" class="view"><div class="doc">
-   <h3>对局设置</h3><label>地图种子 <input id="seed" type="number" value="1"></label><label>模式 <select id="mode"><option value="spawn-and-swamp">Spawn and Swamp（基础）</option></select></label>
+   <h3>对局设置</h3><label>地图种子 <input id="seed" type="number" value="1"></label><label>模式 <select id="mode"><option value="spawn-and-swamp">Spawn and Swamp（基础）</option><option value="spawn-and-swamp-advanced">Spawn and Swamp（高级）</option><option value="capture-the-flag">Capture the Flag（基础）</option></select></label>
+   <h3>局域网联机</h3>
+   <p class="dim">同一 WiFi（或热点）下：一台开房当玩家 1，另一台加入当玩家 2，其余加入者观战。房主权威模拟，实时同步。</p>
+   <label>昵称 <input id="nick" maxlength="16" placeholder="玩家"></label>
+   <div class="row"><button id="hostBtn">🏠 开房</button><button id="findBtn">🔍 搜索房间</button></div>
+   <div class="row"><input id="ip" placeholder="房主 IP，如 192.168.1.5" style="flex:1"><button id="joinBtn">加入</button></div>
+   <div id="hosts" class="row"></div><pre id="lobby" class="dim"></pre>
+   <div class="row"><button id="lanStart" class="run hidden">▶ 开始联机对局</button><button id="lanSend" class="hidden">⇪ 发送我的代码</button><button id="lanLeave" class="hidden">断开</button></div>
    <h3>回放</h3><div class="row"><button id="save">保存回放</button><button id="load">载入回放</button><input type="file" id="file" hidden accept=".json,application/json"></div>
    <h3>应用</h3><div class="row"><button id="updBtn">检查更新</button><span id="ver"></span></div>
    <h3>API 速查（对齐 arena.screeps.com/docs）</h3>
@@ -32,5 +40,5 @@
  </main>
  <nav class="tabs"><button data-v="play" class="on"><span>⚔</span>对局</button><button data-v="code"><span>{ }</span>代码</button><button data-v="more"><span>⋯</span>更多</button></nav>
 </div>
-<script src="version.js"></script><script src="vendor/capacitor.js"></script><script src="update.js"></script>
+<script src="version.js"></script><script src="vendor/blockly_compressed.js"></script><script src="vendor/blocks_compressed.js"></script><script src="vendor/javascript_compressed.js"></script><script src="vendor/msg-zh.js"></script><script src="blocks.js"></script><script src="vendor/capacitor.js"></script><script src="update.js"></script>
 <script type="module" src="app.js"></script></body></html>

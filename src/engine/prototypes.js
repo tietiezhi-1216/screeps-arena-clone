@@ -28,6 +28,11 @@ export class Resource extends GameObject {
   get ticksToDecay() { return 1; }
 }
 export class Flag extends GameObject { constructor(w, x, y, owner) { super(w, x, y); Object.defineProperty(this, '_owner', { value: owner, writable: true }); } get my() { return this._owner == null ? undefined : this._owner === this._w.current; } }
+// Capture the Flag：地图上掉落的身体部件，creep 走上去即可获得（arena/season_*/capture_the_flag/*）
+export class BodyPart extends GameObject {
+  constructor(w, x, y, type, decay) { super(w, x, y); this.type = type; Object.defineProperty(this, '_decayAt', { value: w.tick + decay }); }
+  get ticksToDecay() { return this._decayAt - this._w.tick; }
+}
 export class ConstructionSite extends GameObject {
   constructor(w, x, y, proto, owner) { super(w, x, y); Object.defineProperty(this, '_owner', { value: owner }); this._proto = proto; this.progress = 0; this.progressTotal = C.CONSTRUCTION_COST[proto.name]; this.structure = undefined; }
   get my() { return this._owner === this._w.current; }

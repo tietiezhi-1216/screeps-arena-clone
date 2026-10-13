@@ -15,7 +15,7 @@ export function drawFrame(g, terrainC, f, prev, k = 1, sel) {
   g.drawImage(terrainC, 0, 0);
   const pm = prev ? new Map(prev.objs.map(o => [o.id, o])) : new Map();
   const pos = o => { const p = pm.get(o.id); if (!p || o.t !== 'Creep') return [cx(o.x), cx(o.y)]; return [cx(p.x + (o.x - p.x) * k), cx(p.y + (o.y - p.y) * k)]; };
-  const order = ['StructureRoad', 'ConstructionSite', 'Resource', 'Source', 'StructureContainer', 'StructureExtension', 'StructureWall', 'StructureSpawn', 'StructureTower', 'Creep', 'StructureRampart'];
+  const order = ['StructureRoad', 'BodyPart', 'Flag', 'ConstructionSite', 'Resource', 'Source', 'StructureContainer', 'StructureExtension', 'StructureWall', 'StructureSpawn', 'StructureTower', 'Creep', 'StructureRampart'];
   const objs = [...f.objs].sort((a, b) => order.indexOf(a.t) - order.indexOf(b.t));
   for (const o of objs) {
     const [x, y] = pos(o), col = COLORS[o.o] || COLORS.neutral;
@@ -25,6 +25,8 @@ export function drawFrame(g, terrainC, f, prev, k = 1, sel) {
       case 'Source': g.fillStyle = '#4a4222'; g.fillRect(x - 3.5, y - 3.5, 7, 7); g.fillStyle = COLORS.energy; const s = 6 * o.e / o.c; g.fillRect(x - s / 2, y - s / 2, s, s); break;
       case 'StructureContainer': g.fillStyle = '#181818'; g.strokeStyle = '#666'; g.lineWidth = 1; g.fillRect(x - 3, y - 3.5, 6, 7); g.strokeRect(x - 3, y - 3.5, 6, 7); g.fillStyle = COLORS.energy; { const h = 6 * o.e / o.c; g.fillRect(x - 2, y + 3 - h, 4, h); } break;
       case 'StructureExtension': g.strokeStyle = col; g.fillStyle = '#181818'; g.beginPath(); g.arc(x, y, 3, 0, 7); g.fill(); g.stroke(); g.fillStyle = COLORS.energy; g.beginPath(); g.arc(x, y, 2 * o.e / o.c, 0, 7); g.fill(); break;
+      case 'Flag': g.strokeStyle = '#ddd'; g.lineWidth = 1; g.beginPath(); g.moveTo(x - 2.5, y + 4); g.lineTo(x - 2.5, y - 4); g.stroke(); g.fillStyle = col; g.beginPath(); g.moveTo(x - 2.5, y - 4); g.lineTo(x + 4, y - 2); g.lineTo(x - 2.5, y); g.fill(); break;
+      case 'BodyPart': g.fillStyle = PART[o.bt === 'ranged_attack' ? 'r' : o.bt[0]] || '#fff'; g.beginPath(); g.moveTo(x, y - 3); g.lineTo(x + 3, y); g.lineTo(x, y + 3); g.lineTo(x - 3, y); g.fill(); break;
       case 'StructureWall': g.fillStyle = '#3a3a3a'; g.fillRect(x - 4, y - 4, 8, 8); break;
       case 'StructureRampart': g.strokeStyle = col; g.lineWidth = 1.5; g.globalAlpha = .6; g.strokeRect(x - 3.5, y - 3.5, 7, 7); g.globalAlpha = 1; break;
       case 'ConstructionSite': g.strokeStyle = col; g.lineWidth = 1; g.setLineDash([1.5, 1.5]); g.beginPath(); g.arc(x, y, 3, 0, 7); g.stroke(); g.setLineDash([]); break;
@@ -44,6 +46,7 @@ export function drawFrame(g, terrainC, f, prev, k = 1, sel) {
     if (sel && sel === o.id) { g.strokeStyle = '#fff'; g.lineWidth = 1; g.strokeRect(x - 5, y - 5, 10, 10); }
   }
   if (k > 0.3) for (const e of f.ev || []) {
+    if (e.t === 'part') continue;
     if (e.t === 'die') { g.strokeStyle = '#ff0'; g.globalAlpha = 1 - k; g.beginPath(); g.arc(cx(e.at[0]), cx(e.at[1]), 6 * k, 0, 7); g.stroke(); g.globalAlpha = 1; continue; }
     g.strokeStyle = e.t === 'heal' ? '#65fd62' : e.k === 'ranged' ? '#5d80b2' : e.k === 'tower' ? '#ffb74d' : '#f93842';
     g.lineWidth = 1.2; g.beginPath(); g.moveTo(cx(e.f[0]), cx(e.f[1])); g.lineTo(cx(e.to[0]), cx(e.to[1])); g.stroke();

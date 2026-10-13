@@ -1,1 +1,1 @@
-{ "appId": "com.tietiezhi.screepsarena", "appName": "Screeps Arena", "webDir": "www", "android": { "allowMixedContent": false } }
+{ "appId": "com.tietiezhi.screepsarena", "appName": "Screeps Arena", "webDir": "www", "android": { "allowMixedContent": true } }

@@ -45,5 +45,6 @@ public class MainActivity extends BridgeActivity {
 }
 JAVA
 sed -i 's/<activity/<activity android:screenOrientation="fullUser"/' android/app/src/main/AndroidManifest.xml
+sed -i "s/<application/<application android:usesCleartextTraffic=\"true\"/" android/app/src/main/AndroidManifest.xml
 grep -E "versionCode|versionName" android/app/build.gradle
 (cd android && ./gradlew assembleRelease --no-daemon -q)
