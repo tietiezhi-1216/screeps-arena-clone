@@ -154,7 +154,7 @@ function scoreOf(f, p) {
   return f.objs.filter(o => o.t === 'Creep' && o.o === p && !o.sp).length;
 }
 function draw(k = 1) {
-  g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#141b26'; g.fillRect(0, 0, cv.width, cv.height);
+  g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#0A0A0A'; g.fillRect(0, 0, cv.width, cv.height);
   if (!replay) return; const f = replay.frames[frame];
   g.setTransform(dpr * view.s, 0, 0, dpr * view.s, dpr * view.x, dpr * view.y);
   drawFrame(g, terr, f, replay.frames[frame - 1], k, sel, 1);

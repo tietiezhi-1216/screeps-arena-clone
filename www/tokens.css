@@ -1,0 +1,47 @@
+/* Screeps 系列（World / Arena）共用设计变量。固定 px，不跟随系统字号。
+   Arena 只需覆盖 --acc / --acc-dn / --acc-soft。 */
+:root{
+  /* 主色 */
+  --acc:#5973FF; --acc-dn:#4A62DB; --acc-soft:#5973FF22;      /* World */
+  /* Arena: --acc:#E5484D; --acc-dn:#C93D42; --acc-soft:#E5484D22; */
+  /* 底色层级（由深到浅） */
+  --bg-world:#0A0A0A;  /* 游戏画布 */
+  --bg:#1E1E1E;        /* 页面 / 底栏 */
+  --row:#262626;       /* 列表行 */
+  --panel:#2B2B2B;     /* 面板 / 对话框 */
+  --btn:#333333; --btn-line:#444444;
+  --input:#1A1A1A;
+  --line:#3A3A3A;      /* 1px 分隔线 / 边框 */
+  --overlay:#000000AA; /* 对话框遮罩 */
+  /* 文字 */
+  --text:#D8D8D8; --text-hi:#FFFFFF; --muted:#8C8C8C; --faint:#666666;
+  /* 语义色 */
+  --info:#87BDEE; --ok:#7EE2A0; --warn:#FFE56D; --danger:#D65D5D;
+  --danger-bg:#3A2626; --danger-line:#6A3434; --danger-text:#F0B0B0;
+  /* 字号 */
+  --fs-xs:11px; --fs-s:13px; --fs-m:14px; --fs-l:18px; --fs-xl:24px; --fs-mono:12px;
+  --font:system-ui,-apple-system,"PingFang SC","Noto Sans CJK SC",sans-serif;
+  --mono:ui-monospace,Menlo,Consolas,monospace;
+  /* 间距 */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px;
+  /* 圆角 */
+  --r-s:3px; --r-m:4px; --r-l:6px;
+  /* 尺寸 */
+  --h-btn:40px; --h-row:46px; --h-head:48px; --h-chip:28px; --h-tool:32px; --w-bar:56px;
+  --w-side-panel:min(380px,44vw); --w-dialog:min(360px,90vw);
+  /* 安全区（挖孔 / 导航栏），原生可注入 --nsa* 兜底 */
+  --sal:max(env(safe-area-inset-left,0px),var(--nsal,0px));
+  --sar:max(env(safe-area-inset-right,0px),var(--nsar,0px));
+  --sat:max(env(safe-area-inset-top,0px),var(--nsat,0px));
+  --sab:max(env(safe-area-inset-bottom,0px),var(--nsab,0px));
+}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+*{box-shadow:none!important;background-image:none;text-shadow:none}
+button{font:inherit;border:0;white-space:nowrap}
+.btn{height:var(--h-btn);padding:0 var(--sp-3);border-radius:var(--r-s);background:var(--btn);border:1px solid var(--btn-line);color:var(--text);font-size:var(--fs-m)}
+.btn.primary{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+.btn.primary:active{background:var(--acc-dn)}
+.btn.danger{background:var(--danger-bg);border-color:var(--danger-line);color:var(--danger-text)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+/* Arena 覆盖主色（规范允许的唯一差异） */
+:root{--acc:#E5484D;--acc-dn:#C93D42;--acc-soft:#E5484D22}

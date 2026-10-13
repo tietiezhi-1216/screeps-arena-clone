@@ -202,7 +202,7 @@ function toCode(ws) {
 const indent = s => s.split('\n').map(l => l ? '  ' + l : l).join('\n');
 const DEFAULT_WS = null;
 const THEME = Blockly.Theme.defineTheme('arena-dark', { name: 'arena-dark', base: Blockly.Themes.Classic,
-  componentStyles: { workspaceBackgroundColour: '#1C2533', toolboxBackgroundColour: '#222c3c', toolboxForegroundColour: '#e6e6e6', flyoutBackgroundColour: '#222c3c', flyoutForegroundColour: '#e6e6e6', flyoutOpacity: 1, scrollbarColour: '#555', scrollbarOpacity: 0.6, insertionMarkerColour: '#ffffff', insertionMarkerOpacity: 0.3, cursorColour: '#d0d0d0' } });
+  componentStyles: { workspaceBackgroundColour: '#1E1E1E', toolboxBackgroundColour: '#2B2B2B', toolboxForegroundColour: '#e6e6e6', flyoutBackgroundColour: '#2B2B2B', flyoutForegroundColour: '#e6e6e6', flyoutOpacity: 1, scrollbarColour: '#555', scrollbarOpacity: 0.6, insertionMarkerColour: '#ffffff', insertionMarkerOpacity: 0.3, cursorColour: '#d0d0d0' } });
 
 // 交互沿用 screeps-blockly-mobile：顶部分类 chips → 全宽积木列表（按最宽积木缩放、竖向滚动）；点按 = 添加到可见区域；长按 = 拖出
 window.ArenaBlocks = {
