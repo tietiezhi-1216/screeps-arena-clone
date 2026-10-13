@@ -59,6 +59,25 @@ const circ = (g, r, fill) => { g.fillStyle = fill; g.beginPath(); g.arc(0, 0, r,
 const ring = (g, r, w, col, a0 = 0, a1 = 7) => { g.strokeStyle = col; g.lineWidth = w; g.lineCap = 'butt'; g.beginPath(); g.arc(0, 0, r, a0, a1); g.stroke(); };
 const rrect = (g, x, y, w, h, r, fill, stroke, lw) => { g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, r) : g.rect(x, y, w, h); if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw; g.stroke(); } };
 const EN = '#ffe56d';
+// 玩家徽章（官方 ScreepsBadge 图案）：setBadges({ p1: {badge, name}, p2: {...} })，渲染时画在 creep / spawn 中心
+const BADGE = {}; export const PLAYERS = {};
+export function setBadges(map) {
+  for (const k of Object.keys(PLAYERS)) delete PLAYERS[k];
+  for (const [pid, v] of Object.entries(map || {})) { PLAYERS[pid] = v; const key = JSON.stringify(v.badge || null);
+    if (BADGE[pid]?.key === key) continue; BADGE[pid] = { key, img: null };
+    if (!v.badge || typeof window === 'undefined' || !window.ScreepsBadge) continue;
+    const img = new Image(); img.onload = () => { BADGE[pid].img = img; }; let svg = window.ScreepsBadge.svg(v.badge, 64); if (!svg.includes('xmlns')) svg = svg.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); }
+}
+function badge(g, pid, r) { const b = pid && BADGE[pid]?.img; if (!b) return false; g.save(); g.beginPath(); g.arc(0, 0, r, 0, 7); g.clip(); g.drawImage(b, -r, -r, 2 * r, 2 * r); g.restore(); return true; }
+// creep 朝向：移动时朝向移动方向，停下保持原朝向；每次绘制按最短角度平滑转过去（约 0.25 秒转完）
+const FACE = new Map(); let lastT = 0;
+function facing(o, p, now, dt) {
+  let f = FACE.get(o.id); const want = p && (p.x !== o.x || p.y !== o.y) ? Math.atan2(o.y - p.y, o.x - p.x) : f ? f.want : (o.o === 'p2' ? Math.PI : 0);
+  if (!f) { f = { cur: want, want }; FACE.set(o.id, f); }
+  f.want = want; let d = ((want - f.cur + Math.PI * 3) % (Math.PI * 2)) - Math.PI; const step = Math.min(1, dt / 120);
+  f.cur += d * step; return f.cur;
+}
 export function drawSprite(g, o, col) {
   switch (o.t) {
     case 'StructureRoad': circ(g, .15, '#4a5260'); break;
@@ -77,16 +96,21 @@ export function drawSprite(g, o, col) {
     case 'StructureRampart': g.globalAlpha = .4; rrect(g, -.5, -.5, 1, 1, .12, col); g.globalAlpha = 1; rrect(g, -.47, -.47, .94, .94, .12, null, col, .06); break;
     case 'ConstructionSite': g.setLineDash([.08, .06]); ring(g, .3, .06, col); g.setLineDash([]); circ(g, .08, col); break;
     case 'StructureSpawn':
-      circ(g, .5, RIM); ring(g, .45, .045, col); circ(g, .41, CORE); circ(g, .35 * Math.sqrt(o.e / o.c), EN);
+      circ(g, .5, RIM); ring(g, .45, .045, col); circ(g, .41, CORE); if (o.e) ring(g, .385, .05, EN, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * Math.min(1, o.e / o.c)); if (!badge(g, o.o, .32)) circ(g, .3, col);
       if (o.spn) ring(g, .45, .1, '#fff', -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * o.spn[0] / o.spn[1]); break;
     case 'StructureTower': circ(g, .4, RIM); ring(g, .34, .07, col); circ(g, .27, CORE); circ(g, .25 * Math.sqrt((o.e || 0) / (o.c || 1)), EN); rrect(g, -.1, -.62, .2, .5, 0, CORE, col, .05); break;
     case 'Creep': {
-      const parts = o.b.split(','), n = parts.length;
-      if (parts.some(p => p[0] === 't' && !p.endsWith('!'))) ring(g, .47, .05, 'rgba(255,255,255,.7)');
+      // 对照官方 / World 渲染：每个部件一段弧（弧长 = 1/50 圈），MOVE 在后方居中，其余部件在前方居中、左右对称依次展开；TOUGH 为外圈。
+      // 本函数以“前方 = 右（角度 0）”绘制，调用方已按朝向旋转。损坏的部件不画（与官方一致：只显示还有生命的部件）。
+      const parts = o.b.split(','), live = t => parts.filter(p => p[0] === t && !p.endsWith('!')).length, PER = Math.PI * 2 / 50;
+      if (live('t')) ring(g, .47, .05, `rgba(255,255,255,${Math.min(.9, .45 + live('t') / 20)})`);
       circ(g, .43, '#222'); ring(g, .43, .03, col);
-      parts.forEach((p, i) => { if (p[0] === 't') return; const a0 = -Math.PI / 2 + i * 2 * Math.PI / n; ring(g, .345, .13, p.endsWith('!') ? '#3a3f47' : PART[p[0]], a0, a0 + 2 * Math.PI / n); });
-      circ(g, .27, CORE); circ(g, .17, col); if (o.e) ring(g, .22, .05, EN);
-      if (o.esc) ring(g, .52, .04, EN); break; }
+      const arc = (c, sp, colr) => { if (sp > 0) ring(g, .345, .13, colr, c - sp / 2, c + sp / 2); };
+      arc(Math.PI, live('m') * PER, PART.m);
+      const front = ['w', 'a', 'r', 'h', 'c'].filter(t => live(t)), total = front.reduce((a, t) => a + live(t), 0) * PER;
+      let st = -total / 2; for (const t of front) { const sp = live(t) * PER; arc(st + sp / 2, sp, PART[t]); st += sp; }
+      circ(g, .27, CORE);
+      break; }
   }
 }
 export function drawFrame(g, terrainC, f, prev, k = 1, sel, u = 1) {
@@ -94,12 +118,15 @@ export function drawFrame(g, terrainC, f, prev, k = 1, sel, u = 1) {
   const pm = prev ? new Map(prev.objs.map(o => [o.id, o])) : new Map();
   const pos = o => { const p = pm.get(o.id); if (!p || o.t !== 'Creep') return [cx(o.x), cx(o.y)]; return [cx(p.x + (o.x - p.x) * k), cx(p.y + (o.y - p.y) * k)]; };
   const order = ['EffectZone', 'AreaEffect', 'Portal', 'ConstructionBoost', 'StructureGoal', 'StructureRoad', 'BodyPart', 'Flag', 'ConstructionSite', 'Resource', 'Source', 'StructureContainer', 'StructureExtension', 'StructureWall', 'StructureSpawn', 'StructureTower', 'Creep', 'StructureRampart', 'ScoreCollector'];
+  const now = typeof performance !== 'undefined' ? performance.now() : 0, dt = lastT ? Math.min(100, now - lastT) : 16; lastT = now;
   const objs = [...f.objs].sort((a, b) => order.indexOf(a.t) - order.indexOf(b.t));
   for (const o of objs) {
     const [x, y] = pos(o), col = COLORS[o.o] || COLORS.neutral;
     if (o.t === 'Creep' && o.sp) continue;
     if (o.t === 'EffectZone') { const rr = cx(o.x + o.r + 0.5) - cx(o.x - o.r - 0.5); g.globalAlpha = .16; g.fillStyle = o.ef === 'freeze' ? '#6cf' : o.ef === 'heal' ? '#6f6' : '#f55'; g.fillRect(x - rr / 2, y - rr / 2, rr, rr); g.globalAlpha = 1; continue; }
-    g.save(); g.translate(x, y); g.scale(TS, TS); drawSprite(g, o, col);
+    g.save(); g.translate(x, y); g.scale(TS, TS);
+    if (o.t === 'Creep') { g.save(); g.rotate(facing(o, pm.get(o.id), now, dt)); drawSprite(g, o, col); g.restore(); if (!badge(g, o.o, .2)) circ(g, .17, col); if (o.e) ring(g, .235, .045, EN); if (o.esc) ring(g, .52, .04, EN); } else drawSprite(g, o, col);
+    if (o.t === 'StructureSpawn' && PLAYERS[o.o]?.name) { g.font = '600 .42px sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(PLAYERS[o.o].name, .03, -.78); g.fillStyle = col; g.fillText(PLAYERS[o.o].name, 0, -.8); }
     if (o.h != null && o.h < o.hm && (o.t === 'Creep' || o.t === 'StructureSpawn' || o.t === 'StructureTower')) hpBar(g, 0, -.68, o.h / o.hm, col);
     if (sel && sel === o.id) { g.strokeStyle = '#fff'; g.lineWidth = .06; g.strokeRect(-.55, -.55, 1.1, 1.1); }
     g.restore();

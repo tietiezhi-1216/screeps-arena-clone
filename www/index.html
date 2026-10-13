@@ -10,6 +10,7 @@
    <button id="goStart" class="primary" data-icon="player-play"><span class="lb">开始</span></button>
    <button id="goScripts" data-icon="file-code"><span class="lb">我的脚本</span></button>
    <button id="goReplays" data-icon="history"><span class="lb">回放</span></button>
+   <button id="goProfile" data-icon="user"><span class="lb">个人中心</span></button>
   </div>
   <div class="foot about"><div id="ver"></div><button id="chkUpd" class="updRow"><span class="lb">检查更新</span><span id="chkUpdV" class="v"></span></button></div>
  </div>
@@ -24,7 +25,7 @@
 </section>
 
 <section id="modes" class="screen">
- <header class="head"><button class="hb" data-back data-icon="arrow-left"></button><h1>选择模式</h1><div class="seg" id="level"><button data-v="1" class="on">基础</button><button data-v="2">高级</button></div></header>
+ <header class="head"><button class="hb" data-back data-icon="arrow-left"></button><h1>选择模式</h1></header>
  <div class="body"><div id="mcards" class="mcards"></div></div>
 </section>
 
@@ -35,9 +36,12 @@
    <div class="banner" id="banner"></div>
    <div class="sec">人机练习</div>
    <div class="list" id="aiList">
-    <button class="row" data-diff="easy"><span class="ic2" data-icon="robot"></span><span class="lb">简单</span><span class="v">适合入门</span></button>
-    <button class="row" data-diff="normal"><span class="ic2" data-icon="robot"></span><span class="lb">普通</span><span class="v">均衡</span></button>
-    <button class="row" data-diff="hard"><span class="ic2" data-icon="robot"></span><span class="lb">困难</span><span class="v">强力</span></button>
+    <button class="row" data-diff="beginner"><span class="ic2" data-icon="robot"></span><span class="lb">入门</span><span class="v">只会往前冲</span></button>
+    <button class="row" data-diff="easy"><span class="ic2" data-icon="robot"></span><span class="lb">简单</span><span class="v">会一点配合</span></button>
+    <button class="row" data-diff="normal"><span class="ic2" data-icon="robot"></span><span class="lb">普通</span><span class="v">会风筝、会治疗</span></button>
+    <button class="row" data-diff="hard"><span class="ic2" data-icon="robot"></span><span class="lb">困难</span><span class="v">集火、残血撤退</span></button>
+    <button class="row" data-diff="expert"><span class="ic2" data-icon="robot"></span><span class="lb">专家</span><span class="v">看对手调整兵种</span></button>
+    <button class="row" data-diff="master"><span class="ic2" data-icon="robot"></span><span class="lb">大师</span><span class="v">绕开危险、全力运营</span></button>
    </div>
    <div class="sec">真人对战</div>
    <div class="list"><button class="row" id="goLan"><span class="ic2" data-icon="broadcast"></span><span class="lb">局域网对战</span><span class="v">同一 Wi-Fi</span></button></div>
@@ -74,6 +78,20 @@
  <div id="busy" class="busy hidden"><div class="spin"></div><span id="busyT">模拟中</span></div>
 </section>
 
+<section id="profile" class="screen">
+ <header class="head"><button class="hb" data-back data-icon="arrow-left"></button><h1>个人中心</h1></header>
+ <div class="body prof">
+  <div class="pfHead"><div id="pfBadge" class="pfBadge"></div><div><div id="pfName" class="pfName"></div><button id="pfRename" class="link"><span class="lb">修改名字</span></button></div></div>
+  <div class="sec">战绩</div><div id="pfStats" class="pfStats"></div>
+  <div class="sec">各模式</div><div id="pfModes" class="list"></div>
+  <div class="sec">徽章图案</div><div id="pfTypes" class="pfTypes"></div>
+  <div class="sec">主色</div><div id="pfC1" class="pfCols"></div>
+  <div class="sec">图案色 1</div><div id="pfC2" class="pfCols"></div>
+  <div class="sec">图案色 2</div><div id="pfC3" class="pfCols"></div>
+  <div class="irow"><span class="lb">图案变化</span><input id="pfParam" type="range" min="-100" max="100" step="5"><button id="pfFlip" class="btn sm">翻转</button><button id="pfRand" class="btn sm">随机</button></div>
+ </div>
+</section>
+
 <section id="replays" class="screen">
  <header class="head"><button class="hb" data-back data-icon="arrow-left"></button><h1>回放</h1></header>
  <div class="body"><div id="rlist" class="list"></div></div>
@@ -82,5 +100,5 @@
 <div id="dlg" class="dlg hidden"><div class="box"><div class="dt" id="dlgT"></div><div id="dlgB"></div><div class="row2"><button id="dlgNo" class="btn">取消</button><button id="dlgOk" class="btn primary">确定</button></div></div></div>
 <div id="sheet" class="dlg hidden"><div class="box" id="sheetB"></div></div>
 
-<script src="version.js"></script><script src="icons.js"></script><script src="icons-extra.js"></script><script src="vendor/blockly_compressed.js"></script><script src="vendor/blocks_compressed.js"></script><script src="vendor/javascript_compressed.js"></script><script src="vendor/msg-zh.js"></script><script src="blocks.js"></script><script src="vendor/capacitor.js"></script><script src="back-stack.js"></script><script src="update-ui.js"></script><script src="update.js"></script>
+<script src="version.js"></script><script src="icons.js"></script><script src="icons-extra.js"></script><script src="vendor/blockly_compressed.js"></script><script src="vendor/blocks_compressed.js"></script><script src="vendor/javascript_compressed.js"></script><script src="vendor/msg-zh.js"></script><script src="blocks.js"></script><script src="badges.js"></script><script src="vendor/capacitor.js"></script><script src="back-stack.js"></script><script src="update-ui.js"></script><script src="update.js"></script>
 <script type="module" src="app.js"></script></body></html>

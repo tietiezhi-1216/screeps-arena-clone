@@ -4,7 +4,7 @@ import { Blockly, AB, program } from './helpers-blocks.mjs';
 import { runMatch } from '../src/engine/match.js';
 import { transformModule } from '../src/engine/sandbox.js';
 const SRC = fs.readFileSync(new URL('../www/blocks.js', import.meta.url), 'utf8');
-const EASY = fs.readFileSync(new URL('../bots/ai/easy.mjs', import.meta.url), 'utf8');
+const EASY = fs.readFileSync(new URL('../bots/ai/beginner.mjs', import.meta.url), 'utf8');
 const noErr = r => { const bad = r.frames.flatMap(f => f.log?.p1 || []).filter(l => /error/i.test(l)); assert.deepEqual(bad, []); };
 
 test('coverage: every official API in docs/OFFICIAL_COVERAGE.md has a block in a category', () => {
@@ -107,8 +107,8 @@ function collectProgram(P, { B, get: g } = P) {
   ]);
 }
 const ROLES = [{ name: '搬分员', body: 'carry:2,move:2' }];
-for (const [modes, make] of [[['spawn-and-swamp', 'spawn-and-swamp-advanced'], swampProgram], [['capture-the-flag', 'capture-the-flag-advanced'], flagProgram], [['collect-and-control', 'collect-and-control-advanced'], collectProgram]])
-  for (const mode of modes) test(`example block program beats easy AI: ${mode}`, () => {
+for (const [modes, make] of [[['spawn-and-swamp-advanced'], swampProgram], [['capture-the-flag-advanced'], flagProgram], [['collect-and-control-advanced'], collectProgram]]) // v0.12：界面里每个模式只剩一个版本
+  for (const mode of modes) test(`example block program beats beginner AI (入门): ${mode}`, () => {
     const P = program(); const code = P.gen(make(P), ROLES); assert.ok(!/\bH\./.test(code));
     const r = runMatch({ mode, seed: 1, scripts: [code, EASY], maxTicks: 4000 }); noErr(r);
     assert.equal(r.meta.result?.winner, 'p1', JSON.stringify(r.meta.result));

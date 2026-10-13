@@ -199,3 +199,12 @@ input:focus{border-color:var(--acc)}
 #edDone{flex:0 0 auto;height:28px;padding:0 10px;border-radius:4px;background:#E5484D;border:0;color:#fff;gap:4px;white-space:nowrap}#edDone .ic{font-size:14px}
 #edTabs #cats button{background:color-mix(in srgb,var(--c) 70%,#1e2028)!important;border:0!important;color:#fff;font-weight:600}
 #edTabs #cats button.on{background:#E5484D!important}
+/* 个人中心 */
+.prof .pfHead{display:flex;align-items:center;gap:16px;padding:12px 4px}
+.pfBadge svg{display:block;border-radius:50%;box-shadow:0 0 0 3px #000,0 0 0 4px #444}
+.pfName{font-size:20px;font-weight:700}
+.pfStats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.pfS{background:var(--card,#262626);border-radius:8px;padding:10px 4px;text-align:center}.pfS b{display:block;font-size:20px}.pfS span{font-size:12px;opacity:.7}
+.pfTypes{display:flex;flex-wrap:wrap;gap:6px}.pfT{padding:2px;border-radius:50%;border:2px solid transparent;background:none;line-height:0}.pfT.on{border-color:var(--acc,#7ee2a0)}.pfT svg{border-radius:50%}
+.pfCols{display:flex;flex-wrap:wrap;gap:4px}.pfC{width:22px;height:22px;border-radius:4px;border:2px solid transparent;padding:0}.pfC.on{border-color:#fff}
+.prof .irow{display:flex;align-items:center;gap:8px;margin:12px 0}.prof .irow input[type=range]{flex:1}

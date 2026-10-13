@@ -1,5 +1,5 @@
 // Screeps Arena（移动版）v0.8：首页 → 我的脚本（选择/编辑） → 模式 → 人机难度 / 局域网 → 对局。仅积木编程；脚本库保存在本地，每个脚本标注竞技场。
-import { TS, N, terrainCanvas, drawFrame } from './render.js';
+import { TS, N, terrainCanvas, drawFrame, setBadges } from './render.js';
 import { transformModule } from './src/engine/sandbox.js';
 import { HostSession, ClientSession, nativeTransport, LAN_PORT } from './src/net/lan.js';
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
@@ -11,13 +11,16 @@ $('#ver').textContent = 'v' + (window.APP_VERSION || 'dev');
 let blocks = null, code = '', lanHost = null, lanClient = null, liveWorker = null;
 // ---------- 存储：脚本库（localStorage）+ 回放（IndexedDB） ----------
 const KS = { lib: 'sa.scripts', cur: 'sa.cur', level: 'sa.level', nick: 'sa.nick', ip: 'sa.ip' };
+// v0.12：每个模式只有一个版本（采用规则更完整的原“高级”版）；engine = 引擎里的模式名
 const MODES = [
-  { id: 'spawn-and-swamp', name: '出生与沼泽', d: '摧毁敌方 Spawn', cover: 'cover-swamp.jpg' },
-  { id: 'capture-the-flag', name: '夺旗', d: '夺取全部旗帜', cover: 'cover-flag.jpg' },
-  { id: 'collect-and-control', name: '收集与控制', d: '收集分数送入收集器', cover: 'cover-collect.jpg' },
+  { id: 'spawn-and-swamp', engine: 'spawn-and-swamp-advanced', name: '出生与沼泽', d: '摧毁敌方 Spawn', cover: 'cover-swamp.jpg' },
+  { id: 'capture-the-flag', engine: 'capture-the-flag-advanced', name: '夺旗', d: '夺取全部旗帜', cover: 'cover-flag.jpg' },
+  { id: 'collect-and-control', engine: 'collect-and-control-advanced', name: '收集与控制', d: '收集分数送入收集器', cover: 'cover-collect.jpg' },
+  { id: 'three-lanes', engine: 'three-lanes', name: '三路推塔', d: '三条路推掉敌塔，拆掉敌方基地', cover: 'cover-lanes.jpg' },
+  { id: 'king-of-the-hill', engine: 'king-of-the-hill', name: '山头争夺', d: '占住中间的旗帜，先到 300 分', cover: 'cover-hill.jpg' },
 ];
 const MN = Object.fromEntries(MODES.map(m => [m.id, m.name]));
-const arenaName = (mode, level) => `${MN[mode] || mode} · ${level === 2 ? '高级' : '基础'}`;
+const arenaName = mode => MN[String(mode).replace(/-advanced$/, '')] || mode;
 let lib = []; try { lib = JSON.parse(localStorage[KS.lib] || '[]'); } catch (e) {}
 if (!lib.length) { // 从 v0.7 的“每竞技场一份”迁移
   for (const m of MODES) for (const lv of [1, 2]) { const k = `sa.ws.${m.id}${lv === 2 ? '-advanced' : ''}`; const ws = localStorage[k]; if (ws && ws !== 'null' && ws.includes('blocks')) lib.push({ id: 's' + Date.now().toString(36) + lib.length, name: arenaName(m.id, lv), mode: m.id, level: lv, ws: JSON.parse(ws), t: Date.now() }); }
@@ -87,9 +90,9 @@ function renderLib() {
 }
 function newScript(base) {
   const mode = base?.mode || MODES[0].id, level = base?.level || 1;
-  dialog(base ? '复制脚本' : '新建脚本', `<input id="fName" maxlength="24" value="${esc(base ? base.name + ' 副本' : '脚本 ' + (lib.length + 1))}">${segHtml('fMode', MODES.map(m => [m.id, m.name]), mode)}${segHtml('fLevel', [[1, '基础'], [2, '高级']], level)}`, () => {
+  dialog(base ? '复制脚本' : '新建脚本', `<input id="fName" maxlength="24" value="${esc(base ? base.name + ' 副本' : '脚本 ' + (lib.length + 1))}">${segHtml('fMode', MODES.map(m => [m.id, m.name]), mode)}`, () => {
     const name = $('#fName').value.trim(); if (!name) return false;
-    const s = { id: 's' + Date.now().toString(36), name, mode: segVal('fMode'), level: +segVal('fLevel'), ws: base ? JSON.parse(JSON.stringify(base.ws || null)) : null, t: Date.now() };
+    const s = { id: 's' + Date.now().toString(36), name, mode: segVal('fMode'), level: 2, ws: base ? JSON.parse(JSON.stringify(base.ws || null)) : null, t: Date.now() };
     lib.push(s); saveLib(); state.cur = s.id; localStorage[KS.cur] = s.id; renderLib(); if (!base) openEditor();
   }, base ? '复制' : '创建');
 }
@@ -99,26 +102,24 @@ function more(s) {
   $('#sheetB').onclick = e => { const a = e.target.closest('button')?.dataset.a; if (!a) return; closeDlg(); state.cur = s.id; localStorage[KS.cur] = s.id;
     if (a === 'edit') openEditor();
     if (a === 'dup') newScript(s);
-    if (a === 'ren') dialog('重命名', `<input id="fName" maxlength="24" value="${esc(s.name)}">${segHtml('fMode', MODES.map(m => [m.id, m.name]), s.mode)}${segHtml('fLevel', [[1, '基础'], [2, '高级']], s.level)}`, () => { const n = $('#fName').value.trim(); if (!n) return false; s.name = n; s.mode = segVal('fMode'); s.level = +segVal('fLevel'); saveLib(); renderLib(); });
+    if (a === 'ren') dialog('重命名', `<input id="fName" maxlength="24" value="${esc(s.name)}">${segHtml('fMode', MODES.map(m => [m.id, m.name]), s.mode)}`, () => { const n = $('#fName').value.trim(); if (!n) return false; s.name = n; s.mode = segVal('fMode'); saveLib(); renderLib(); });
     if (a === 'del') dialog('删除脚本', `<div class="state">删除「${esc(s.name)}」？此操作无法撤销</div>`, () => { lib = lib.filter(x => x !== s); saveLib(); if (state.cur === s.id) { state.cur = lib[0]?.id || null; localStorage[KS.cur] = state.cur || ''; } renderLib(); }, '删除');
     renderLib(); };
 }
 $('#newScript').onclick = () => newScript();
 $('#scEdit').onclick = () => curScript() && openEditor();
-$('#scNext').onclick = () => { const s = curScript(); if (!s) return; state.level = s.level; setLevel(s.level); renderModes(); go('modes'); };
+$('#scNext').onclick = () => { const s = curScript(); if (!s) return; renderModes(); go('modes'); };
 
 // ---------- 模式 ----------
 const seg = (id, cb) => { const el = $(id); const set = v => { $$(id + ' button').forEach(b => b.classList.toggle('on', b.dataset.v == v)); }; el.onclick = e => { const b = e.target.closest('button'); if (!b) return; set(b.dataset.v); cb(b.dataset.v); }; return set; };
-const setLevel = seg('#level', v => { state.level = +v; localStorage[KS.level] = v; });
-setLevel(state.level);
 function renderModes() { const s = curScript(); $('#mcards').innerHTML = '';
   for (const m of MODES) { const b = document.createElement('button'); b.className = 'mc';
     b.innerHTML = `<span class="im" style="background-image:url(${m.cover})"></span><div class="cap"><span class="mt">${m.name}</span><span class="md">${m.d}</span>${s?.mode === m.id ? '<span class="badge">脚本适用</span>' : ''}</div>`;
-    b.onclick = () => { state.mode = m.id; $('#setupTitle').textContent = arenaName(m.id, state.level); $('#banner').style.backgroundImage = `url(${m.cover})`; go('setup'); }; $('#mcards').append(b); } }
+    b.onclick = () => { state.mode = m.id; $('#setupTitle').textContent = m.name; $('#banner').style.backgroundImage = `url(${m.cover})`; go('setup'); }; $('#mcards').append(b); } }
 renderModes();
 $$('#aiList .row').forEach(b => b.onclick = () => { state.vs = 'ai'; state.diff = b.dataset.diff; startAi(); });
 $('#goLan').onclick = () => { state.vs = 'lan'; go('lobby'); scan(); };
-const modeId = () => `${state.mode}${state.level === 2 ? '-advanced' : ''}`;
+const modeId = () => MODES.find(m => m.id === state.mode)?.engine || state.mode;
 
 // ---------- 积木编辑器 ----------
 function openEditor() { const s = curScript(); if (!s) return; go('editor'); if (blocks) blocks.load(s.ws); else initBlocks(); refreshCode(); setTimeout(() => { blocks?.resize(); if (blocks?.count()) blocks.center(); }, 30); }
@@ -211,7 +212,8 @@ async function startAi() {
   worker.onmessage = e => { const d = e.data;
     if (d.progress) $('#busyT').textContent = `模拟中 ${d.progress}`;
     if (d.error) { clearTimeout(dog); $('#busy').classList.add('hidden'); alert(d.error); }
-    if (d.replay) { clearTimeout(dog); worker.terminate(); $('#busy').classList.add('hidden'); d.replay.meta.vs = 'ai:' + state.diff; setReplay(d.replay); saveReplay(d.replay); } };
+    if (d.replay) { clearTimeout(dog); worker.terminate(); $('#busy').classList.add('hidden'); d.replay.meta.vs = 'ai:' + state.diff; recordResult(state.mode, state.diff, d.replay.meta.result); setReplay(d.replay); saveReplay(d.replay); } };
+  applyBadges(AI_PLAYER[state.diff]);
   worker.postMessage({ scripts: [myCode(), ai], seed: 1 + (Date.now() % 9973), mode: modeId() });
 }
 
@@ -260,15 +262,51 @@ function join(addr) { loadCode();
   lanClient.onStatus = s => { netState(s === '已加入，你是玩家 2' ? '已加入 · 等待房主开始' : s); if (s === '连接断开' || s === '连接失败') { lanClient = null; lobbyMode('idle'); } };
   lanClient.onLobby = players; lanClient.onStart = liveBegin; lanClient.onTick = liveFrame; lanClient.onEnd = liveEnd;
 }
-function liveBegin(st) { live = true; go('match'); $('#busy').classList.add('hidden'); setReplay({ meta: st.meta, terrain: st.terrain, frames: [st.first] }); }
+function liveBegin(st) { applyBadges(); live = true; go('match'); $('#busy').classList.add('hidden'); setReplay({ meta: st.meta, terrain: st.terrain, frames: [st.first] }); }
 function liveFrame(f) { if (!replay) return; replay.frames.push(f); $('#scrub').max = replay.frames.length - 1; if (playing && frame >= replay.frames.length - 4) frame = replay.frames.length - 2; }
 function liveEnd(res) { live = false; if (replay) { replay.meta.result = replay.frames.at(-1).result || res; replay.meta.ticks = replay.frames.length - 1; replay.meta.mode = replay.meta.mode || modeId(); saveReplay(replay); } }
 async function stopLive() { liveWorker?.terminate(); liveWorker = null; lanClient?.close(); lanClient = null; if (lanHost) { try { await lanHost.t.plugin.stop(); } catch (e) {} lanHost = null; } live = false; lobbyMode('idle'); $('#players').innerHTML = ''; netState(''); }
 
 // ---------- 回放 ----------
 $('#goReplays').onclick = async () => { go('replays'); const all = ((await tx('readonly', s => s.getAll())) || []).sort((a, b) => b.id - a.id);
-  const name = m => arenaName((m || '').replace(/-advanced$/, ''), /-advanced$/.test(m || '') ? 2 : 1);
+  const name = m => arenaName(m || '');
   const dt = t => { const d = new Date(t), z = n => String(n).padStart(2, '0'); return `${d.getMonth() + 1}/${d.getDate()} ${z(d.getHours())}:${z(d.getMinutes())}`; };
   $('#rlist').innerHTML = all.length ? '' : '<div class="empty">还没有回放</div>';
   for (const r of all) { const b = document.createElement('button'); b.className = 'item'; const w = r.result?.winner; b.innerHTML = `<div class="it"><div class="in">${name(r.mode)}</div><div class="is"><span class="tag">${!w ? '平局' : w === 'p1' ? '胜' : '负'}</span>${esc(r.script || '')} ${dt(r.id)}</div></div>`;
-    b.onclick = () => { state.vs = 'replay'; go('match'); $('#busy').classList.add('hidden'); setReplay(r.data); }; $('#rlist').append(b); } };
+    b.onclick = () => { state.vs = 'replay'; applyBadges(AI_PLAYER[(r.data.meta.vs || '').replace('ai:', '')]); go('match'); $('#busy').classList.add('hidden'); setReplay(r.data); }; $('#rlist').append(b); } };
+
+// ---------- 个人中心：名字、徽章（官方 ScreepsBadge 图案）、战绩 ----------
+const DIFF_NAME = { beginner: '入门', easy: '简单', normal: '普通', hard: '困难', expert: '专家', master: '大师' };
+const AI_PLAYER = Object.fromEntries(Object.entries(DIFF_NAME).map(([k, n], i) => [k, { name: '电脑 · ' + n, badge: { type: [5, 9, 12, 17, 20, 24][i], color1: 21, color2: 1, color3: 60, param: 0, flip: false } }]));
+const KP = { badge: 'sa.badge', stats: 'sa.stats' };
+const J = (k, d) => { try { return JSON.parse(localStorage[k]) || d; } catch (e) { return d; } };
+const randBadge = () => { const r = n => Math.floor(Math.random() * n); return { type: 1 + r(24), color1: r(80), color2: r(80), color3: r(80), param: r(41) * 5 - 100, flip: false }; };
+const myBadge = () => { let b = J(KP.badge, null); if (!b) { b = randBadge(); localStorage[KP.badge] = JSON.stringify(b); } return b; };
+const stats = () => J(KP.stats, { games: 0, wins: 0, losses: 0, draws: 0, modes: {} });
+function recordResult(mode, diff, r) {
+  const st = stats(), m = st.modes[mode] = st.modes[mode] || { games: 0, wins: 0 }, win = r?.winner === 'p1', draw = !r?.winner;
+  st.games++; m.games++; if (win) { st.wins++; m.wins++; } else if (draw) st.draws++; else st.losses++;
+  st.best = st.best || {}; if (win) { const order = Object.keys(DIFF_NAME); if (order.indexOf(diff) > order.indexOf(st.best[mode] || '')) st.best[mode] = diff; }
+  localStorage[KP.stats] = JSON.stringify(st);
+}
+function applyBadges(opp) { setBadges({ p1: { name: nick(), badge: myBadge() }, p2: opp || { name: '对手', badge: { type: 1, color1: 21, color2: 60, color3: 1, param: 0 } } }); }
+const badgeSvg = (b, n) => window.ScreepsBadge ? ScreepsBadge.svg(b, n) : '';
+function renderProfile() {
+  const b = myBadge(), st = stats(), pct = st.games ? Math.round(st.wins * 100 / st.games) : 0;
+  $('#pfBadge').innerHTML = badgeSvg(b, 84); $('#pfName').textContent = nick();
+  $('#pfStats').innerHTML = [['对局', st.games], ['胜利', st.wins], ['失败', st.losses], ['胜率', pct + '%']].map(([k, v]) => `<div class="pfS"><b>${v}</b><span>${k}</span></div>`).join('');
+  $('#pfModes').innerHTML = MODES.map(m => { const x = st.modes[m.id] || { games: 0, wins: 0 }, best = st.best?.[m.id]; return `<div class="row"><span class="lb">${m.name}</span><span class="v">${x.wins} 胜 / ${x.games} 局${best ? ' · 最高击败 ' + DIFF_NAME[best] : ''}</span></div>`; }).join('');
+  $('#pfTypes').innerHTML = (window.ScreepsBadge?.types || []).map(t => `<button class="pfT${b.type === t ? ' on' : ''}" data-t="${t}">${badgeSvg({ ...b, type: t }, 40)}</button>`).join('');
+  const C = window.ScreepsBadge?.colors || [];
+  for (const [id, k] of [['#pfC1', 'color1'], ['#pfC2', 'color2'], ['#pfC3', 'color3']]) $(id).innerHTML = C.map((c, i) => `<button class="pfC${b[k] === i ? ' on' : ''}" data-k="${k}" data-c="${i}" style="background:${c}"></button>`).join('');
+  $('#pfParam').value = b.param || 0;
+}
+const saveBadge = f => { const b = myBadge(); f(b); localStorage[KP.badge] = JSON.stringify(b); renderProfile(); };
+$('#pfTypes').onclick = e => { const t = e.target.closest('[data-t]'); if (t) saveBadge(b => { b.type = +t.dataset.t; }); };
+for (const id of ['#pfC1', '#pfC2', '#pfC3']) $(id).onclick = e => { const t = e.target.closest('[data-c]'); if (t) saveBadge(b => { b[t.dataset.k] = +t.dataset.c; }); };
+$('#pfParam').onchange = e => saveBadge(b => { b.param = +e.target.value; });
+$('#pfFlip').onclick = () => saveBadge(b => { b.flip = !b.flip; });
+$('#pfRand').onclick = () => saveBadge(b => Object.assign(b, randBadge()));
+$('#pfRename').onclick = () => dialog('修改名字', `<input id="fName" maxlength="16" value="${esc(nick())}">`, () => { const n = $('#fName').value.trim(); if (!n) return false; localStorage[KS.nick] = n; renderProfile(); });
+$('#goProfile').onclick = () => { renderProfile(); go('profile'); };
+applyBadges();
