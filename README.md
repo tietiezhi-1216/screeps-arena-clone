@@ -1,4 +1,4 @@
-<p align="center"><img src="assets/icon.svg" width="96"></p>
+<p align="center"><img src="assets/icon-512.png" width="96"></p>
 
 # Screeps Arena Clone
 
