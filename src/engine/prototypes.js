@@ -5,6 +5,15 @@ export const range = (a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)
 export const DIRS = { 1: [0, -1], 2: [1, -1], 3: [1, 0], 4: [1, 1], 5: [0, 1], 6: [-1, 1], 7: [-1, 0], 8: [-1, -1] };
 export function direction(dx, dy) { const sx = Math.sign(dx), sy = Math.sign(dy); for (const d in DIRS) if (DIRS[d][0] === sx && DIRS[d][1] === sy) return +d; return undefined; }
 
+// 官方文档同 tick 互斥：登记新动作时清掉冲突 intent。
+const CONFLICTS = {
+  attack: ['harvest', 'build', 'heal'],
+  harvest: ['attack', 'build', 'heal'],
+  build: ['harvest', 'attack', 'heal', 'ranged'],
+  heal: ['harvest', 'build', 'attack'],
+  ranged: ['build'],
+};
+
 export class Store {
   constructor(cap, limited) { Object.defineProperty(this, '_cap', { value: cap, writable: true }); Object.defineProperty(this, '_lim', { value: !!limited }); }
   getCapacity(r) { if (this._lim && r !== undefined && r !== C.RESOURCE_ENERGY) return null; return this._cap; }
@@ -15,6 +24,8 @@ export class Store {
 export class GameObject {
   constructor(w, x, y) { Object.defineProperty(this, '_w', { value: w }); this.id = String(w.nextId++); this.x = x; this.y = y; }
   get exists() { return this._w.objects.get(this.id) === this; }
+  /** 控制本对象的 Flag（Capture the Flag）；无则 undefined。官方：GameObject.controlledBy */
+  get controlledBy() { return this._controlledBy || undefined; }
   get ticksToDecay() { return undefined; }
   getRangeTo(p) { return range(this, p); }
   findClosestByRange(ps) { return this._w.utils.findClosestByRange(this, ps); }
@@ -22,13 +33,12 @@ export class GameObject {
   findInRange(ps, r) { return this._w.utils.findInRange(this, ps, r); }
   findPathTo(p, o) { return this._w.utils.findPath(this, p, o); }
 }
-export class Source extends GameObject { constructor(w, x, y, energy = 1000, cap = 1000) { super(w, x, y); this.energy = energy; this.energyCapacity = cap; } }
+export class Source extends GameObject { constructor(w, x, y, energy = C.SOURCE_ENERGY_CAPACITY, cap = C.SOURCE_ENERGY_CAPACITY) { super(w, x, y); this.energy = energy; this.energyCapacity = cap; } }
 export class Resource extends GameObject {
   constructor(w, x, y, amount, type = C.RESOURCE_ENERGY) { super(w, x, y); this.amount = amount; this.resourceType = type; }
-  get ticksToDecay() { return 1; }
+  get ticksToDecay() { const d = Math.ceil(Math.max(1, this.amount) / C.RESOURCE_DECAY); return Math.ceil(this.amount / d); }
 }
 export class Flag extends GameObject { constructor(w, x, y, owner) { super(w, x, y); Object.defineProperty(this, '_owner', { value: owner, writable: true }); } get my() { return this._owner == null ? undefined : this._owner === this._w.current; } }
-// Capture the Flag：地图上掉落的身体部件，creep 走上去即可获得（arena/season_*/capture_the_flag/*）
 export class BodyPart extends GameObject {
   constructor(w, x, y, type, decay) { super(w, x, y); this.type = type; Object.defineProperty(this, '_decayAt', { value: w.tick + decay }); }
   get ticksToDecay() { return this._decayAt - this._w.tick; }
@@ -43,10 +53,19 @@ export class OwnedStructure extends Structure {
   constructor(w, x, y, hits, owner) { super(w, x, y, hits); Object.defineProperty(this, '_owner', { value: owner, writable: true }); }
   get my() { return this._owner == null ? undefined : this._owner === this._w.current; }
 }
-export class StructureRoad extends Structure { constructor(w, x, y) { super(w, x, y, C.ROAD_HITS); } }
+export class StructureRoad extends Structure {
+  constructor(w, x, y) {
+    const swamp = w.terrainAt(x, y) === C.TERRAIN_SWAMP;
+    super(w, x, y, swamp ? C.ROAD_HITS_SWAMP : C.ROAD_HITS);
+  }
+}
 export class StructureWall extends Structure { constructor(w, x, y) { super(w, x, y, C.WALL_HITS); } }
 export class StructureContainer extends OwnedStructure {
-  constructor(w, x, y, owner = null) { super(w, x, y, C.CONTAINER_HITS, owner); this.store = new Store(C.CONTAINER_CAPACITY); }
+  constructor(w, x, y, owner = null, { decayIn } = {}) {
+    super(w, x, y, C.CONTAINER_HITS, owner); this.store = new Store(C.CONTAINER_CAPACITY);
+    if (decayIn != null) Object.defineProperty(this, '_decayAt', { value: w.tick + decayIn, writable: true });
+  }
+  get ticksToDecay() { return this._decayAt == null ? undefined : this._decayAt - this._w.tick; }
 }
 export class StructureRampart extends OwnedStructure { constructor(w, x, y, owner) { super(w, x, y, C.RAMPART_HITS, owner); this.hitsMax = C.RAMPART_HITS_MAX; } }
 export class StructureExtension extends OwnedStructure { constructor(w, x, y, owner) { super(w, x, y, C.EXTENSION_HITS, owner); this.store = new Store(C.EXTENSION_ENERGY_CAPACITY, true); } }
@@ -55,7 +74,7 @@ export class StructureTower extends OwnedStructure {
   _act(kind, t) {
     if (!this.my) return ERR_NOT_OWNER; if (!t || !t.exists || t.hits === undefined) return ERR_INVALID_TARGET;
     if (kind === 'heal' && !(t instanceof Creep)) return ERR_INVALID_TARGET;
-    if ((this.store.energy || 0) < C.TOWER_ENERGY_COST) return ERR_NOT_ENOUGH_RESOURCES;
+    if ((this.store.energy || 0) < C.TOWER_ENERGY_COST) return C.ERR_NOT_ENOUGH_ENERGY;
     if (this.cooldown > 0) return ERR_TIRED; if (range(this, t) > C.TOWER_RANGE) return ERR_NOT_IN_RANGE;
     this._w.intent(this, 'tower', { kind, target: t.id }); return OK;
   }
@@ -76,7 +95,8 @@ export class StructureSpawn extends OwnedStructure {
     if (this.spawning) return { error: ERR_BUSY };
     if (!Array.isArray(body) || !body.length || body.length > C.MAX_CREEP_SIZE || body.some(b => !(b in C.BODYPART_COST))) return { error: ERR_INVALID_ARGS };
     const cost = body.reduce((a, b) => a + C.BODYPART_COST[b], 0);
-    const w = this._w, pool = [this, ...w.all(StructureExtension).filter(e => e._owner === this._owner && range(e, this) <= C.SPAWN_RANGE)];
+    // Extension 文档：任意距离；扣能顺序先 Spawn 再 Extension（社区实测）
+    const w = this._w, pool = [this, ...w.all(StructureExtension).filter(e => e._owner === this._owner)];
     if (pool.reduce((a, s) => a + (s.store.energy || 0), 0) < cost) return { error: C.ERR_NOT_ENOUGH_ENERGY };
     const creep = new Creep(w, this.x, this.y, this._owner, body); creep.spawning = true;
     w.intent(this, 'spawn', { body: body.slice(), cost, creep });
@@ -92,6 +112,13 @@ export class Creep extends GameObject {
   get my() { return this._owner === this._w.current; }
   _parts(t) { return this.body.filter(p => p.type === t && p.hits > 0).length; }
   _pre(part) { if (!this.my) return ERR_NOT_OWNER; if (this.spawning) return ERR_BUSY; if (part && !this._parts(part)) return ERR_NO_BODYPART; return OK; }
+  _clearConflicts(kind, data) {
+    const m = this._w.intents.get(this.id); if (!m) return;
+    for (const k of (CONFLICTS[kind] || [])) delete m[k];
+    if (kind === 'ranged') { if (data.kind !== undefined && m.heal && m.heal.ranged) delete m.heal; }
+    if (kind === 'heal' && data.ranged) delete m.ranged;
+  }
+  _intent(kind, data) { this._clearConflicts(kind, data); this._w.intent(this, kind, data); }
   move(dir) {
     let e = this._pre(C.MOVE); if (e) return e; if (this.fatigue > 0) return ERR_TIRED;
     if (dir instanceof Creep) { if (range(this, dir) !== 1) return ERR_NOT_IN_RANGE; dir = direction(dir.x - this.x, dir.y - this.y); }
@@ -108,15 +135,21 @@ export class Creep extends GameObject {
     let e = this._pre(part); if (e) return e; if (!t || !t.exists || (kinds && !kinds.some(k => t instanceof k))) return ERR_INVALID_TARGET;
     if (range(this, t) > r) return ERR_NOT_IN_RANGE; return OK;
   }
-  attack(t) { const e = this._target(t, C.ATTACK, 1, [Creep, Structure]); if (e) return e; if (t.hits === undefined) return ERR_INVALID_TARGET; this._w.intent(this, 'attack', { target: t.id }); return OK; }
-  rangedAttack(t) { const e = this._target(t, C.RANGED_ATTACK, 3, [Creep, Structure]); if (e) return e; if (t.hits === undefined) return ERR_INVALID_TARGET; this._w.intent(this, 'ranged', { kind: 'single', target: t.id }); return OK; }
-  rangedMassAttack() { const e = this._pre(C.RANGED_ATTACK); if (e) return e; this._w.intent(this, 'ranged', { kind: 'mass' }); return OK; }
-  heal(t) { const e = this._target(t, C.HEAL, 1, [Creep]); if (e) return e; this._w.intent(this, 'heal', { target: t.id, power: C.HEAL_POWER }); return OK; }
-  rangedHeal(t) { const e = this._target(t, C.HEAL, 3, [Creep]); if (e) return e; this._w.intent(this, 'heal', { target: t.id, power: C.RANGED_HEAL_POWER, ranged: true }); return OK; }
-  harvest(t) { const e = this._target(t, C.WORK, 1, [Source]); if (e) return e; if (!t.energy) return ERR_NOT_ENOUGH_RESOURCES; this._w.intent(this, 'harvest', { target: t.id }); return OK; }
+  attack(t) {
+    const e = this._target(t, C.ATTACK, 1, [Creep, Structure, ConstructionSite]); if (e) return e;
+    if (!(t instanceof ConstructionSite) && t.hits === undefined) return ERR_INVALID_TARGET;
+    this._intent('attack', { target: t.id }); return OK;
+  }
+  rangedAttack(t) { const e = this._target(t, C.RANGED_ATTACK, 3, [Creep, Structure]); if (e) return e; if (t.hits === undefined) return ERR_INVALID_TARGET; this._intent('ranged', { kind: 'single', target: t.id }); return OK; }
+  rangedMassAttack() { const e = this._pre(C.RANGED_ATTACK); if (e) return e; this._intent('ranged', { kind: 'mass' }); return OK; }
+  heal(t) { const e = this._target(t, C.HEAL, 1, [Creep]); if (e) return e; this._intent('heal', { target: t.id, power: C.HEAL_POWER }); return OK; }
+  rangedHeal(t) { const e = this._target(t, C.HEAL, 3, [Creep]); if (e) return e; this._intent('heal', { target: t.id, power: C.RANGED_HEAL_POWER, ranged: true }); return OK; }
+  harvest(t) { const e = this._target(t, C.WORK, 1, [Source]); if (e) return e; if (!t.energy) return ERR_NOT_ENOUGH_RESOURCES; this._intent('harvest', { target: t.id }); return OK; }
   build(t) {
-    const e = this._target(t, C.WORK, 3, [ConstructionSite]); if (e) return e; if (!(this.store.energy > 0)) return ERR_NOT_ENOUGH_RESOURCES;
-    this._w.intent(this, 'build', { target: t.id }); return OK;
+    const e = this._target(t, C.WORK, 3, [ConstructionSite]); if (e) return e;
+    if (!this._parts(C.CARRY)) return ERR_NO_BODYPART;
+    if (!(this.store.energy > 0)) return ERR_NOT_ENOUGH_RESOURCES;
+    this._intent('build', { target: t.id }); return OK;
   }
   _res(r, amt) { return r !== C.RESOURCE_ENERGY || (amt !== undefined && !(amt > 0)); }
   transfer(t, r, amt) {
@@ -135,6 +168,5 @@ export class Creep extends GameObject {
   pickup(t) { let e = this._pre(); if (e) return e; if (!(t instanceof Resource) || !t.exists) return ERR_INVALID_TARGET; if (range(this, t) > 1) return ERR_NOT_IN_RANGE; if (this.store.getFreeCapacity() <= 0) return ERR_FULL; this._w.intent(this, 'pickup', { target: t.id }); return OK; }
   drop(r, amt) { let e = this._pre(); if (e) return e; if (this._res(r, amt)) return ERR_INVALID_ARGS; const have = this.store[r] || 0; amt ??= have; if (!have || have < amt) return ERR_NOT_ENOUGH_RESOURCES; this._w.intent(this, 'drop', { r, amt }); return OK; }
 }
-// 官方 structureType 名称（OBSTACLE_OBJECT_TYPES 用到）
 export const TYPE_NAME = new Map([[Creep, 'creep'], [StructureTower, 'tower'], [StructureWall, 'constructedWall'], [StructureSpawn, 'spawn'], [StructureExtension, 'extension'], [StructureRampart, 'rampart'], [StructureRoad, 'road'], [StructureContainer, 'container']]);
 export const PROTOTYPES = { GameObject, Creep, Structure, OwnedStructure, StructureSpawn, StructureTower, StructureContainer, StructureExtension, StructureRampart, StructureRoad, StructureWall, Source, Resource, ConstructionSite, Flag, Store, Spawning };

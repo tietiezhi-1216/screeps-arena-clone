@@ -81,6 +81,7 @@ export class World {
   }
   _healCreep(c, amt) { for (let i = c.body.length - 1; i >= 0 && amt > 0; i--) { const p = c.body[i]; const d = Math.min(C.BODYPART_HITS - p.hits, amt); p.hits += d; amt -= d; } c.hits = c.body.reduce((a, p) => a + p.hits, 0); }
 
+  // 同格抢位决胜键：seed + 目标格 + creep.id，与玩家下标/intent 登记先后无关
   _movePrio(c, x, y) {
     let h = (this.seed | 0) ^ Math.imul(x + 1, 0x85ebca6b) ^ Math.imul(y + 1, 0xc2b2ae35);
     const id = String(c.id);
@@ -89,15 +90,16 @@ export class World {
   }
   step() {
     if (this.result) return; this.events = []; this._dmg = new Map(); const heal = new Map(), get = id => this.objects.get(id);
+    // 按对象 id 排序，结算顺序不依赖玩家 loop 先后
     const I = [...this.intents.entries()].map(([id, m]) => [get(id), m]).filter(([o]) => o)
       .sort((a, b) => (a[0].id < b[0].id ? -1 : a[0].id > b[0].id ? 1 : 0));
     // 1 战斗
     for (const [o, m] of I) {
-      if (m.attack) { const t = get(m.attack.target); if (t && range(o, t) <= 1) { o._k = 'melee'; this._damage(this._redirect(t, o._owner), o._parts(C.ATTACK) * C.ATTACK_POWER, o); } }
+      if (m.attack) { const t = get(m.attack.target); if (t && range(o, t) <= 1) { o._k = 'melee'; if (t instanceof P.ConstructionSite) { this.remove(t); this.events.push({ t: 'atk', f: [o.x, o.y], to: [t.x, t.y], k: 'melee' }); } else this._damage(this._redirect(t, o._owner), o._parts(C.ATTACK) * C.ATTACK_POWER, o); } }
       if (m.ranged) {
         o._k = 'ranged'; const pw = o._parts(C.RANGED_ATTACK) * C.RANGED_ATTACK_POWER;
         if (m.ranged.kind === 'single') { const t = get(m.ranged.target); if (t && range(o, t) <= 3) this._damage(this._redirect(t, o._owner), pw, o); }
-        else for (const t of this.all()) { if (t._owner == null || t._owner === o._owner || t.hits === undefined || t instanceof P.ConstructionSite) continue; const r = range(o, t); if (r <= 3) this._damage(t, Math.round(pw * C.RANGED_ATTACK_DISTANCE_RATE[r]), r ? null : o); }
+        else for (const t of this.all()) { if (t._owner == null || t._owner === o._owner || t.hits === undefined || t instanceof P.ConstructionSite) continue; const r = range(o, t); if (r <= 3) this._damage(this._redirect(t, o._owner), Math.round(pw * C.RANGED_ATTACK_DISTANCE_RATE[r]), r ? null : o); }
       }
       if (m.heal) { const t = get(m.heal.target); if (t) { heal.set(t, (heal.get(t) || 0) + o._parts(C.HEAL) * m.heal.power); this.events.push({ t: 'heal', f: [o.x, o.y], to: [t.x, t.y] }); } }
       if (m.tower && o.store.energy >= C.TOWER_ENERGY_COST && !o.cooldown) {
@@ -111,7 +113,7 @@ export class World {
     // 2 经济
     for (const [o, m] of I) {
       if (!o.exists) continue;
-      if (m.harvest) { const s = get(m.harvest.target); if (s) { const n = Math.min(s.energy, o._parts(C.WORK) * C.HARVEST_POWER, Math.max(0, o.store.getFreeCapacity())); s.energy -= n; o.store.energy = (o.store.energy || 0) + n; if (o.store.getFreeCapacity() < 0) this._drop(o, -o.store.getFreeCapacity()); } }
+      if (m.harvest) { const s = get(m.harvest.target); if (s && s.energy > 0) { const n = Math.min(s.energy, o._parts(C.WORK) * C.HARVEST_POWER); s.energy -= n; const free = Math.max(0, o.store.getFreeCapacity()); const into = Math.min(n, free); o.store.energy = (o.store.energy || 0) + into; if (n > into) this._drop(o, n - into); } }
       if (m.build) { const s = get(m.build.target); if (s && s.exists) { const n = Math.min(o.store.energy || 0, o._parts(C.WORK) * C.BUILD_POWER, s.progressTotal - s.progress); s.progress += n; o.store.energy -= n;
         if (s.progress >= s.progressTotal) { this.remove(s); const blocked = isObstacle({ constructor: s._proto }) && this.at(s.x, s.y).some(c => c instanceof P.Creep); if (!blocked) { const st = new s._proto(this, s.x, s.y, s._owner); this.add(st); } } } }
       if (m.withdraw) { const t = get(m.withdraw.target); if (t) { const n = Math.min(m.withdraw.amt, t.store[m.withdraw.r] || 0, o.store.getFreeCapacity()); t.store[m.withdraw.r] -= n; o.store[m.withdraw.r] = (o.store[m.withdraw.r] || 0) + n; } }
@@ -137,15 +139,33 @@ export class World {
       if (o instanceof P.StructureTower && o.cooldown > 0) o.cooldown--;
       if (o instanceof P.Creep) o.fatigue = Math.max(0, o.fatigue - 2 * o._parts(C.MOVE));
       if (o instanceof P.Source && o.energy < o.energyCapacity) o.energy = Math.min(o.energyCapacity, o.energy + C.SOURCE_ENERGY_REGEN);
+      // 官方 changelog：Spawns slowly regenerate energy (1 per tick)
+      if (o instanceof P.StructureSpawn && (o.store.energy || 0) < C.SPAWN_ENERGY_CAPACITY)
+        o.store.energy = (o.store.energy || 0) + C.SPAWN_ENERGY_REGEN;
+      if (o instanceof P.StructureContainer && o._decayAt != null && o.ticksToDecay <= 0) {
+        if (o.store.energy) this._drop(o, o.store.energy); this.remove(o); continue;
+      }
       if (o instanceof P.Resource) { o.amount -= Math.ceil(o.amount / C.RESOURCE_DECAY); if (o.amount <= 0) this.remove(o); }
       if (o instanceof P.StructureSpawn && o.spawning) this._spawnProgress(o);
+    }
+    // 同格掉落资源自动进入容器（官方 StructureContainer 文档）
+    for (const ct of this.all(P.StructureContainer)) {
+      for (const r of this.at(ct.x, ct.y).filter(o => o instanceof P.Resource)) {
+        const free = Math.max(0, ct.store.getFreeCapacity()); if (!free) break;
+        const n = Math.min(r.amount, free); ct.store.energy = (ct.store.energy || 0) + n; r.amount -= n; if (r.amount <= 0) this.remove(r);
+      }
     }
     this.intents.clear();
     for (const r of this.rules) r(this);
     if (!this.result && this.tick >= this.ticksLimit) this.result = { winner: null, reason: 'timeout' };
     this.tick++;
   }
-  _drop(o, n) { if (n <= 0) return; const ex = this.at(o.x, o.y).find(r => r instanceof P.Resource); if (ex) ex.amount += n; else this.add(new P.Resource(this, o.x, o.y, n)); }
+  _drop(o, n) {
+    if (n <= 0) return;
+    const ct = this.at(o.x, o.y).find(r => r instanceof P.StructureContainer);
+    if (ct) { const free = Math.max(0, ct.store.getFreeCapacity()); const into = Math.min(n, free); ct.store.energy = (ct.store.energy || 0) + into; n -= into; if (n <= 0) return; }
+    const ex = this.at(o.x, o.y).find(r => r instanceof P.Resource); if (ex) ex.amount += n; else this.add(new P.Resource(this, o.x, o.y, n));
+  }
   _spawnProgress(s) {
     const sp = s.spawning; if (!sp.creep.exists) { s.spawning = undefined; return; } if (--sp.remainingTime > 0) return;
     const dirs = s.directions || [1, 2, 3, 4, 5, 6, 7, 8];
@@ -159,7 +179,9 @@ export class World {
   _moveCost(c, x, y) {
     const road = this.at(x, y).some(o => o instanceof P.StructureRoad), t = this.terrainAt(x, y);
     const k = road ? 1 : t === C.TERRAIN_SWAMP ? 10 : 2;
-    let heavy = 0; let carry = c.store.energy || 0; for (const p of c.body) { if (p.type === C.MOVE) continue; if (p.type === C.CARRY) { if (carry <= 0) continue; carry -= C.CARRY_CAPACITY; } heavy++; }
+    // hits=0 部件失效；空 CARRY 不计疲劳
+    let heavy = 0; let carry = c.store.energy || 0;
+    for (const p of c.body) { if (p.hits <= 0 || p.type === C.MOVE) continue; if (p.type === C.CARRY) { if (carry <= 0) continue; carry -= C.CARRY_CAPACITY; } heavy++; }
     return heavy * k;
   }
   _moves(I) {
@@ -188,7 +210,7 @@ export class World {
           if (o instanceof P.Creep) { if (o.spawning) continue; if (!want.has(o)) { ok = false; break; } }
           else if (isObstacle(o) || (o instanceof P.StructureRampart && o._owner !== c._owner)) { ok = false; break; }
         }
-        if (ok && dest.has(k)) ok = false;
+        if (ok && dest.has(k)) ok = false; // 同格：决胜键更小者已占（已按 prio 排序）
         if (!ok) { want.delete(c); changed = true; continue; }
         dest.set(k, c);
       }
