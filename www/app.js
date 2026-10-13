@@ -108,7 +108,7 @@ function refreshCode() { code = blocks?.code?.() || ''; $('#edEmpty').classList.
 function initBlocks() {
   if (!window.ArenaBlocks) return;
   blocks = ArenaBlocks.create($('#blocklyDiv'), curScript()?.ws || null, (c, st) => { code = c; const s = curScript(); if (s && stack.at(-1) === 'editor') { s.ws = st; s.t = Date.now(); saveLib(); } $('#edEmpty').classList.toggle('hidden', !!blocks && blocks.count() > 0); lanClient?.sendCode(code); });
-  for (const c of ArenaBlocks.CATS) { const b = document.createElement('button'); b.textContent = c.name; b.style.setProperty('--c', c.colour); b.dataset.c = c.id; b.onclick = () => blocks.openCat(c.id); $('#cats').append(b); }
+  for (const c of ArenaBlocks.CATS) { const b = document.createElement('button'); b.innerHTML = `<span class="ic">${IC(c.icon)}</span><span>${c.name}</span>`; b.style.setProperty('--c', c.colour); b.dataset.c = c.id; b.onclick = () => blocks.openCat(c.id); $('#cats').append(b); }
   blocks.onFly = id => { $$('#cats button').forEach(b => b.classList.toggle('on', b.dataset.c === id)); $('#editor').classList.toggle('fly', !!id); };
 }
 // 加载出战脚本的代码（不进入编辑器也能出战）
@@ -255,3 +255,4 @@ $('#goReplays').onclick = async () => { go('replays'); const all = ((await tx('r
   for (const r of all) { const b = document.createElement('button'); b.className = 'item'; const w = r.result?.winner; b.innerHTML = `<div class="it"><div class="in">${name(r.mode)}</div><div class="is"><span class="tag">${!w ? '平局' : w === 'p1' ? '胜' : '负'}</span>${esc(r.script || '')} ${dt(r.id)}</div></div>`;
     b.onclick = () => { state.vs = 'replay'; go('match'); $('#busy').classList.add('hidden'); setReplay(r.data); }; $('#rlist').append(b); } };
 window.__sa = { spawnAt: () => { const o = replay?.frames[frame].objs.find(o => o.t === 'StructureSpawn' && o.o === 'p1'); return o && { x: view.x + (o.x + .5) * TS * view.s, y: view.y + (o.y + .5) * TS * view.s }; } }; // 截图/调试用
+$('#tipBtn').onclick = () => $('#tips').classList.toggle('hidden');

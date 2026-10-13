@@ -74,7 +74,7 @@ input:focus{border-color:var(--acc)}
 #edTools{position:absolute;right:8px;bottom:10px;display:flex;flex-direction:column;gap:6px;z-index:5}
 #edTools button{width:36px;height:36px;border-radius:3px;background:#2c3850;border:1px solid #3a4862;color:#dfe4ec;display:flex;align-items:center;justify-content:center}
 #editor.fly #edTools,#editor.fly #edEmpty{display:none}
-#edEmpty{position:absolute;left:0;right:0;top:40%;text-align:center;color:#6b788c;font-size:13px;pointer-events:none;white-space:nowrap}
+#edEmpty{position:absolute;left:0;right:0;top:34%;display:flex;flex-direction:column;align-items:center;gap:6px;color:#6b788c;font-size:13px;pointer-events:none;z-index:5;white-space:nowrap}
 /* 对局 */
 #match{padding:0;background:#141b26}
 #cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
@@ -134,3 +134,19 @@ input:focus{border-color:var(--acc)}
  #modes .mcards{max-width:none;grid-template-columns:repeat(3,minmax(0,250px));justify-content:center;padding-top:12px}
  .mc .cap{flex-direction:row;align-items:center;padding:8px 10px}.mc .badge{margin:0 0 0 auto}
 }
+
+/* v0.10 分类图标 + 新手提示 + 身体部件面板 */
+#cats button{display:inline-flex;align-items:center;gap:5px}#cats button .ic{font-size:15px}
+#edEmpty .link{pointer-events:auto;width:auto;gap:4px;color:#9aa6b8}#edEmpty .link .ic{font-size:16px}
+#tips{margin:4px 0 0;padding:10px 14px 10px 30px;background:var(--panel);border:1px solid var(--line);border-radius:4px;color:var(--text);font-size:13px;line-height:2}
+#tips b{display:inline-block;padding:0 6px;margin-right:6px;border-radius:2px;color:#fff;font-weight:600;line-height:20px}
+#tips .k1{background:#2e8b57}#tips .k2{background:#c0703a}#tips .k3{background:#b5484c}#tips .k4{background:#3d85c6;margin-left:4px}
+#bodyPanel .bp{width:min(360px,94vw);max-height:92vh;overflow:auto;gap:8px}
+.bpPre{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}.bpPre button{flex:0 0 auto;height:30px;padding:0 10px;border:1px solid var(--line);border-radius:3px;background:#2c3850;font-size:13px}
+.bpList{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:3px}
+.bpRow{display:flex;align-items:center;gap:8px;height:38px;padding:0 6px 0 10px;background:var(--row)}.bpRow+.bpRow{border-top:1px solid var(--line)}
+.bpRow i{width:12px;height:12px;border-radius:50%;flex:0 0 auto}.bpN{flex:1;white-space:nowrap}.bpC{color:var(--mute);font-size:12px;width:44px;text-align:right;white-space:nowrap}.bpC::after{content:' 能量'}
+.bpRow button{width:32px;height:30px;border:1px solid #3a4862;border-radius:3px;background:#2c3850;font-size:16px}.bpRow b{width:26px;text-align:center;font-variant-numeric:tabular-nums}
+.bpBar{display:flex;flex-wrap:wrap;gap:2px;min-height:12px}.bpBar i{width:10px;height:10px;border-radius:50%}
+.bpSum{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);white-space:nowrap}.bpSum b{color:var(--text)}.bpSum .bad,.bpSum .bad b{color:var(--acc)}
+@media (orientation:landscape){#bodyPanel .bp{width:min(560px,92vw);display:grid;grid-template-columns:1fr 1fr;column-gap:12px}#bodyPanel .dt,#bodyPanel .bpPre,#bodyPanel .row2{grid-column:1/3}#bodyPanel .bpList{grid-row:3/6}.bpRow{height:34px}}
